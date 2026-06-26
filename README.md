@@ -1,71 +1,55 @@
-# Controllo Conferme d'Ordine — Deploy con GitHub + Railway + Netlify
+# Suite Controlli — Serchio Distribuzione
 
-Stesso flusso del chatbot: codice su GitHub, backend su Railway, frontend su Netlify.
-Nota: il backend Railway serve anche il frontend, quindi Netlify è facoltativo —
-se vuoi fare prima, basta Railway da solo (vedi "Scorciatoia" in fondo).
+App web per il controllo automatico di documenti commerciali nel settore carta. Confronta ordini, conferme e fatture fornitore segnalando discrepanze in automatico.
 
-## Struttura
+## Struttura del repo
 
-- `server/`   → backend Node/Express (Railway): chiama l'AI, custodisce la chiave API
-- `frontend/` → l'app web (Netlify)
+```
+server.js          → Backend Node/Express (Railway) — gestisce Tool 1 e Tool 2
+package.json
+index.html         → Frontend di riferimento (non usato in produzione)
+tool2-fatture-intra/
+  server.js        → (legacy, non più usato)
+  package.json     → (legacy, non più usato)
+```
 
-## Passo 1 — Chiave API Anthropic
+## Tool disponibili
 
-Su https://console.anthropic.com: account, piccolo credito, genera una API key
-(sezione "API Keys"). Costo indicativo: pochi centesimi per documento analizzato.
+| Tool | Funzione | Stato |
+|---|---|---|
+| **Conferme d'Ordine** | Confronta ordini Serchio con conferme fornitore | ✅ Live |
+| **Fatture Fornitore** | Confronta fatture UE + Mondi con conferme d'ordine | ✅ Live |
+| **Fatture Estere** | Fornitori extra-UE (Turchia, UK, Asia) | ⏳ In arrivo |
 
-## Passo 2 — GitHub
+## Architettura
 
-Crea un repository e carica tutta questa cartella mantenendo la struttura.
+```
+GitHub (questo repo)
+  └── Railway (backend Node/Express)
+        ├── POST /api/analizza   → Tool 1 Conferme d'Ordine
+        └── POST /api/analizza2  → Tool 2 Fatture Fornitore
+              ↑
+        Netlify (frontend HTML singolo)
+```
 
-## Passo 3 — Railway (backend)
+## Deploy Railway
 
-1. https://railway.app → New Project → Deploy from GitHub repo → scegli il repository.
-2. Nelle impostazioni del servizio imposta **Root Directory: `server`**
-   (Railway rileva Node e usa `npm start` automaticamente).
-3. Variables → aggiungi:
-   - `ANTHROPIC_API_KEY` = la tua chiave
-   - `ACCESS_CODE`       = un codice a tua scelta (consigliato)
-4. Settings → Networking → **Generate Domain**: ottieni l'URL del backend,
-   tipo `https://xxxx.up.railway.app`. Copialo.
+Variabili d'ambiente da impostare:
 
-⚠️ Root Directory `server`: in questo modo Railway vede solo il backend, ma il
-server serve il frontend dalla cartella `../frontend` — perciò se preferisci che
-Railway serva anche la pagina, lascia Root Directory vuota e imposta
-**Start Command: `npm start --prefix server`** (e installa con
-`npm install --prefix server`). La via più semplice resta: Root = `server` per
-solo-API + Netlify per la pagina, come sotto.
+| Variabile | Valore |
+|---|---|
+| `ANTHROPIC_API_KEY` | sk-ant-... |
+| `ACCESS_CODE` | codice di accesso scelto |
+| `ALLOWED_ORIGIN` | URL del sito Netlify |
 
-## Passo 4 — Netlify (frontend)
+Railway legge `server.js` dalla root del repo e si aggiorna automaticamente ad ogni push su `main`.
 
-1. Apri `frontend/index.html` e in cima allo script trovi:
-   `const BACKEND_URL = '';`
-   Incolla l'URL Railway: `const BACKEND_URL = 'https://xxxx.up.railway.app';`
-2. Su https://app.netlify.com → Add new site → **Deploy manually** → trascina la
-   cartella `frontend` (oppure collega il repo GitHub con publish directory `frontend`).
-3. Ottieni l'indirizzo pubblico, es. `https://controlli-serkios.netlify.app`.
-   Cambiabile in Site settings → Domain management (anche dominio personalizzato,
-   es. controlli.fibersflow.com).
-4. (Consigliato) Su Railway aggiungi la variabile
-   `ALLOWED_ORIGIN = https://controlli-serkios.netlify.app`
-   così solo il tuo sito Netlify può usare il backend.
+## Deploy Netlify
 
-## Scorciatoia: solo Railway
+Il frontend è il file `index.html` dentro `NETLIFY_suite_unificata.zip` — già configurato con l'URL Railway corretto. Caricare tramite drag & drop nella dashboard Netlify.
 
-Se vuoi un solo servizio: deploy del repo su Railway con Root Directory vuota,
-Build command `npm install --prefix server`, Start command `npm start --prefix server`,
-stesse variabili. Il dominio Railway servirà sia la pagina sia l'API
-(lascia `BACKEND_URL = ''` nel frontend).
+## Verifica backend
 
-## Uso
+Aprire nel browser: `https://[URL-RAILWAY]/health`
 
-Gli utenti aprono il link, inseriscono il codice di accesso, trascinano i PDF
-(ordini, conferme o file combinati) e premono "Avvia controllo". Abbinamento
-automatico per numero d'ordine, criterio di corrispondenza esatta al 100%,
-export CSV del report.
-
-## Sicurezza e dati
-
-- La chiave API vive solo nelle variabili Railway, mai nel browser.
-- ACCESS_CODE impedisce a estranei di consumare il vostro credito.
-- I PDF non vengono salvati: transitano per l'analisi e basta.
+Risposta attesa: `{"status":"ok","tool":"suite-controlli"}`
