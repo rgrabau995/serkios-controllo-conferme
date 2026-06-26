@@ -188,6 +188,9 @@ tr.r-err{background:var(--err-bg)} tr.r-warn{background:var(--warn-bg)}
 </section>
 </main>
 <script>
+const $ = id => document.getElementById(id);
+const BACKEND_URL = 'https://resilient-enthusiasm-production-db96.up.railway.app';
+const files = [];
 document.querySelectorAll('#tabs button').forEach(b => {
   b.addEventListener('click', () => {
     if (b.disabled) return;
@@ -197,9 +200,6 @@ document.querySelectorAll('#tabs button').forEach(b => {
     document.getElementById(b.dataset.view).classList.add('active');
   });
 });
-const $ = id => document.getElementById(id);
-const BACKEND_URL = 'https://resilient-enthusiasm-production-db96.up.railway.app';
-const files = [];
 const drop = $('drop'), fi = $('fileinput');
 drop.addEventListener('click', () => fi.click());
 drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
