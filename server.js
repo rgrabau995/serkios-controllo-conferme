@@ -21,8 +21,41 @@ const MAX_TOKENS = 32000;
 const client = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
 
 // ---------- Schemi JSON: la risposta del modello è sempre valida e completa ----------
-const num = { anyOf: [{ type: 'number' }, { type: 'null' }] };
-const str = { anyOf: [{ type: 'string' }, { type: 'null' }] };
+// L'API accetta al massimo 16 campi "valore oppure null" per schema: per questo ogni campo
+// è una stringa ("" = assente) e normalize() la converte poi in numero o null.
+const num = { type: 'string' };
+const str = { type: 'string' };
+const NUM_FIELDS = new Set([
+  'largh_cm', 'gram', 'diam_cm', 'foro_cm', 'q_kg', 'p_eur_kg', 'sconto_pct', 'totale', 'importo',
+  'massa_netta_kg', 'gram_carta', 'gram_pe', 'largh_mm', 'diam_mm', 'prezzo_eur_ton', 'importo_eur',
+]);
+
+function toNum(v) {
+  if (v == null) return null;
+  let t = String(v).trim().replace(/\s/g, '');
+  if (!t || /^(null|n\/?a|-)$/i.test(t)) return null;
+  if (t.includes('.') && t.includes(',')) t = t.replace(/\./g, '').replace(',', '.');
+  else if (t.includes(',')) t = t.replace(',', '.');
+  const n = Number(t.replace(/[^0-9.\-]/g, ''));
+  return Number.isFinite(n) ? n : null;
+}
+
+// Converte le stringhe del modello: campi numerici -> numero, "" -> null.
+function normalize(x, key) {
+  if (Array.isArray(x)) return x.map(v => normalize(v));
+  if (x && typeof x === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(x)) out[k] = normalize(v, k);
+    return out;
+  }
+  if (NUM_FIELDS.has(key)) return toNum(x);
+  if (typeof x === 'string' && x.trim() === '') return null;
+  return x;
+}
+
+const FORMAT_NOTE = `
+
+FORMATO: tutti i valori sono stringhe. Se un valore è assente usa "" (stringa vuota). Scrivi i numeri senza separatore delle migliaia e con il punto come separatore decimale (es. "5000", "0.905", "12.5").`;
 const obj = (props) => ({
   type: 'object',
   properties: props,
@@ -112,7 +145,7 @@ Se una conferma evade più ordini Serchio, indica in "n_ordine_riga" di ogni rig
 
 "destinazione": luogo di consegna della merce (Consignee, Ship-to, Delivery address, Destinazione, Luogo di consegna): nome + via + città.
 
-Includi TUTTE le righe merce, una per una, così come compaiono nel documento (non unirle e non sommarle). Usa null per i valori assenti.`;
+Includi TUTTE le righe merce, una per una, così come compaiono nel documento (non unirle e non sommarle).` + FORMAT_NOTE;
 
 const PROMPT2 = `Questo PDF contiene uno o più documenti commerciali del settore carta: una FATTURA fornitore intracomunitaria e/o una CONFERMA D'ORDINE.
 
@@ -139,7 +172,7 @@ INDIRIZZO CONSEGNA (indirizzo_consegna): Consignee/Ship-to/Delivery address. Nom
 
 PAGAMENTO (pagamento): testo esatto delle condizioni.
 
-RIGHE: includi TUTTE le righe merce, una per una, così come compaiono nel documento (non unirle e non sommarle). Usa null per i valori assenti.`;
+RIGHE: includi TUTTE le righe merce, una per una, così come compaiono nel documento (non unirle e non sommarle).` + FORMAT_NOTE;
 
 // ---------- Chiamata al modello ----------
 async function callAI(pdf, prompt, schema) {
@@ -167,7 +200,7 @@ async function callAI(pdf, prompt, schema) {
     throw new Error('documento troppo lungo: la risposta è stata troncata');
   }
   const txt = msg.content.filter(c => c.type === 'text').map(c => c.text).join('');
-  return JSON.parse(txt);
+  return normalize(JSON.parse(txt));
 }
 
 function describeError(e) {
