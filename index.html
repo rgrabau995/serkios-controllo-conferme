@@ -4,145 +4,226 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SERCHIO · Suite Controlli</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{
-  --ink:#1c1b1a; --ink-soft:#5d5853; --paper:#f4f1ea; --card:#ffffff;
-  --serchio:#c8342a; --serchio-dark:#9c2118;
-  --ok:#1f7a4d; --ok-bg:#e8f4ed;
-  --warn:#9a6b00; --warn-bg:#fdf3dc; --warn-line:#d99b00;
-  --err:#c8342a; --err-bg:#fbe9e7;
-  --line:#e6e0d6; --line-strong:#cfc7b8;
-  --shadow:0 1px 3px rgba(30,25,20,.06),0 4px 14px rgba(30,25,20,.05);
+  --ink:#191714; --ink-soft:#5f5a53; --ink-faint:#8d877e;
+  --paper:#f5f2ec; --paper-2:#efebe3; --card:#ffffff;
+  --serchio:#c8342a; --serchio-dark:#a3261d; --serchio-tint:#fcefed;
+  --ok:#1b7a4c; --ok-bg:#e7f4ec; --ok-line:#a9d8bd;
+  --warn:#8f6400; --warn-bg:#fdf4de; --warn-line:#e0a714;
+  --err:#c3301f; --err-bg:#fcebe8; --err-line:#efb2a9;
+  --line:#e7e1d7; --line-strong:#d3cabb;
+  --radius:16px;
+  --shadow:0 1px 2px rgba(25,23,20,.05),0 8px 24px -12px rgba(25,23,20,.12);
+  --shadow-lg:0 2px 4px rgba(25,23,20,.05),0 18px 40px -18px rgba(25,23,20,.25);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  background:var(--paper);color:var(--ink);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
-header{background:var(--ink);color:#f5f1ea;padding:0 28px}
-.brandrow{display:flex;align-items:center;gap:12px;padding:16px 0 14px}
-.brandrow .logo{font-size:19px;font-weight:800;letter-spacing:.02em}
-.brandrow .logo span{color:#e8695f}
-.brandrow .tag{font-size:12.5px;color:#b3aa9d;border-left:1px solid #4a463f;padding-left:12px}
-nav.tabs{display:flex;gap:4px}
-nav.tabs button{background:none;border:none;color:#b3aa9d;font-size:13.5px;font-weight:600;
-  padding:11px 16px;cursor:pointer;border-bottom:2.5px solid transparent;display:flex;align-items:center;gap:7px;
-  font-family:inherit;transition:color .12s}
-nav.tabs button:hover{color:#f5f1ea}
+html{background:var(--paper)}
+body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background:var(--paper);color:var(--ink);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  font-feature-settings:"cv11","ss01"}
+svg.i{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* ---------- Header ---------- */
+header{background:#171512;color:#f4efe7;position:relative;overflow:hidden}
+header::after{content:"";position:absolute;inset:auto 0 0 0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.12),transparent)}
+.hwrap{max-width:1160px;margin:0 auto;padding:0 24px}
+.brandrow{display:flex;align-items:center;gap:14px;padding:20px 0 18px}
+.mark{width:38px;height:38px;border-radius:10px;background:var(--serchio);display:grid;place-items:center;
+  font-weight:800;font-size:18px;color:#fff;letter-spacing:-.02em;box-shadow:0 6px 18px -6px rgba(200,52,42,.7),inset 0 1px 0 rgba(255,255,255,.25)}
+.brandrow .logo{font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+.brandrow .logo span{color:#f08a80;font-weight:800;letter-spacing:.04em}
+.brandrow .tag{font-size:12.5px;color:#a69e92;margin-top:2px}
+.brandrow .co{margin-left:auto;font-size:11.5px;color:#8a8378;text-align:right;line-height:1.35}
+nav.tabs{display:flex;gap:2px}
+nav.tabs button{background:none;border:none;color:#a69e92;font-size:13.5px;font-weight:600;
+  padding:12px 16px 13px;cursor:pointer;border-bottom:2px solid transparent;display:flex;align-items:center;gap:8px;
+  font-family:inherit;transition:color .15s,border-color .15s;white-space:nowrap}
+nav.tabs button svg.i{width:16px;height:16px;opacity:.85}
+nav.tabs button:hover{color:#f4efe7}
 nav.tabs button.active{color:#fff;border-bottom-color:var(--serchio)}
-nav.tabs button:disabled{color:#75706a;cursor:default}
-nav.tabs .soon{font-size:10px;font-weight:700;background:#3a3631;color:#c9c1b4;padding:1px 6px;border-radius:10px;letter-spacing:.03em}
-main{max-width:1120px;margin:0 auto;padding:26px 20px 90px}
-.view{display:none} .view.active{display:block}
-.intro{color:var(--ink-soft);font-size:14px;margin-bottom:20px;max-width:760px}
-.placeholder{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:54px 30px;text-align:center;box-shadow:var(--shadow)}
-.placeholder .ic{font-size:34px;margin-bottom:10px}
-.placeholder h2{font-size:18px;margin-bottom:8px}
+nav.tabs button:disabled{color:#6b655c;cursor:default}
+nav.tabs .soon{font-size:10px;font-weight:700;background:#2c2924;color:#b9b0a3;padding:2px 7px;border-radius:10px;letter-spacing:.04em;text-transform:uppercase}
+
+/* ---------- Layout ---------- */
+main{max-width:1160px;margin:0 auto;padding:34px 24px 96px}
+.view{display:none} .view.active{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.pagehead{margin-bottom:22px}
+.eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--serchio)}
+.pagehead h1{font-size:26px;letter-spacing:-.02em;line-height:1.2;margin:6px 0 8px}
+.intro{color:var(--ink-soft);font-size:14.5px;max-width:780px}
+.checks{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.checks span{font-size:12px;font-weight:500;color:var(--ink-soft);background:var(--card);border:1px solid var(--line);padding:4px 10px;border-radius:999px}
+
+.placeholder{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:64px 30px;text-align:center;box-shadow:var(--shadow)}
+.placeholder .ic{width:56px;height:56px;border-radius:16px;background:var(--paper-2);display:grid;place-items:center;margin:0 auto 16px;color:var(--ink-soft)}
+.placeholder .ic svg.i{width:26px;height:26px}
+.placeholder h2{font-size:19px;letter-spacing:-.01em;margin-bottom:8px}
 .placeholder p{color:var(--ink-soft);font-size:14px;max-width:520px;margin:0 auto}
-.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:18px;box-shadow:var(--shadow)}
-.drop{border:2px dashed var(--line-strong);border-radius:12px;padding:36px 20px;text-align:center;
-  cursor:pointer;transition:border-color .15s,background .15s}
-.drop:hover,.drop.over{border-color:var(--serchio);background:#fdf8f5}
-.drop .ic{font-size:30px;margin-bottom:8px;opacity:.8}
-.drop strong{display:block;font-size:16px;margin-bottom:5px}
-.drop small{color:var(--ink-soft)}
-.controls{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:18px}
-.controls label{font-size:13px;color:var(--ink-soft)}
-.controls input[type=password]{width:130px;padding:7px 9px;border:1px solid var(--line-strong);border-radius:7px;font-size:14px;font-family:inherit}
-button.primary{background:var(--serchio);color:#fff;border:none;border-radius:8px;padding:11px 22px;
-  font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .12s}
+
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px;margin-bottom:22px;box-shadow:var(--shadow)}
+.drop{border:1.5px dashed var(--line-strong);border-radius:12px;padding:40px 20px;text-align:center;
+  cursor:pointer;transition:border-color .15s,background .15s,transform .15s;background:linear-gradient(180deg,#fdfcfa,#faf8f4)}
+.drop:hover,.drop.over{border-color:var(--serchio);background:var(--serchio-tint)}
+.drop.over{transform:scale(1.005)}
+.drop .ic{width:52px;height:52px;border-radius:14px;background:var(--card);border:1px solid var(--line);display:grid;place-items:center;
+  margin:0 auto 14px;color:var(--serchio);box-shadow:var(--shadow);transition:transform .2s}
+.drop:hover .ic{transform:translateY(-2px)}
+.drop .ic svg.i{width:24px;height:24px}
+.drop strong{display:block;font-size:15.5px;font-weight:600;margin-bottom:4px}
+.drop small{color:var(--ink-soft);font-size:13px}
+
+.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:18px;padding-top:18px;border-top:1px solid var(--line)}
+.controls label{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft);font-weight:500}
+.controls input[type=password]{width:150px;padding:9px 12px;border:1px solid var(--line-strong);border-radius:9px;font-size:14px;font-family:inherit;
+  background:#fdfcfa;transition:border-color .15s,box-shadow .15s}
+.controls input[type=password]::placeholder{color:var(--ink-faint);font-size:13px}
+.controls input[type=password]:focus{outline:none;border-color:var(--serchio);box-shadow:0 0 0 3px rgba(200,52,42,.14)}
+button.primary{background:var(--serchio);color:#fff;border:none;border-radius:10px;padding:11px 20px;
+  font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s,transform .1s,box-shadow .15s;
+  display:inline-flex;align-items:center;gap:8px;box-shadow:0 6px 16px -8px rgba(200,52,42,.8)}
 button.primary:hover{background:var(--serchio-dark)}
-button.primary:disabled{background:#d3c3bf;cursor:default}
-button.ghost{background:none;border:1px solid var(--line-strong);border-radius:8px;padding:10px 16px;
-  font-size:13px;cursor:pointer;color:var(--ink);font-family:inherit}
-button.ghost:hover{border-color:var(--ink)}
-.hint{font-size:12.5px;color:var(--ink-soft);flex-basis:100%;margin-top:-4px}
+button.primary:active{transform:translateY(1px)}
+button.primary:disabled{background:#dccfca;box-shadow:none;cursor:default}
+button.ghost{background:var(--card);border:1px solid var(--line-strong);border-radius:10px;padding:10px 16px;
+  font-size:13.5px;font-weight:600;cursor:pointer;color:var(--ink);font-family:inherit;display:inline-flex;align-items:center;gap:8px;transition:border-color .15s,background .15s}
+button.ghost:hover{border-color:var(--ink);background:#fdfcfa}
+button:focus-visible{outline:2px solid var(--serchio);outline-offset:2px}
+.hint{font-size:12.5px;color:var(--ink-faint);flex-basis:100%;display:flex;gap:14px;flex-wrap:wrap}
+.hint b{font-weight:600}
+.hint .r{color:var(--err)} .hint .y{color:var(--warn)}
+
 .filelist{margin-top:14px;display:flex;flex-direction:column;gap:6px}
-.filelist .f{display:flex;align-items:center;gap:10px;font-size:13px;padding:8px 11px;background:var(--paper);border-radius:8px;flex-wrap:wrap}
-.f .name{flex:1;min-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.f .tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:12px;background:#ece7dd;color:var(--ink-soft)}
-.f .st{font-size:12px;font-weight:600}
-.st.wait{color:var(--ink-soft)} .st.run{color:var(--warn)} .st.done{color:var(--ok)} .st.fail{color:var(--err)}
-.f .rm{cursor:pointer;color:var(--ink-soft);border:none;background:none;font-size:15px}
-.f .spin{width:13px;height:13px;border:2px solid #d9cfc0;border-top-color:var(--warn);border-radius:50%;animation:sp .7s linear infinite}
+.filelist:empty{display:none}
+.filelist .f{display:flex;align-items:center;gap:10px;font-size:13px;padding:9px 12px;background:#faf8f4;border:1px solid var(--line);border-radius:10px;flex-wrap:wrap;animation:fade .2s ease}
+.f .name{flex:1;min-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:500;display:flex;align-items:center;gap:8px}
+.f .name::before{content:"PDF";font-size:9.5px;font-weight:800;letter-spacing:.04em;color:var(--serchio);background:var(--serchio-tint);padding:3px 5px;border-radius:5px;flex:none}
+.f .tag{font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--paper-2);color:var(--ink-soft)}
+.f .st{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:999px}
+.st.wait{color:var(--ink-soft);background:var(--paper-2)} .st.run{color:var(--warn);background:var(--warn-bg)}
+.st.done{color:var(--ok);background:var(--ok-bg)} .st.fail{color:var(--err);background:var(--err-bg)}
+.f .rm{cursor:pointer;color:var(--ink-faint);border:none;background:none;font-size:16px;width:26px;height:26px;border-radius:7px;line-height:1}
+.f .rm:hover{background:var(--paper-2);color:var(--ink)}
+.f .spin{width:15px;height:15px;border:2px solid #e8dfcf;border-top-color:var(--serchio);border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
-.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px}
-.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:15px 16px;box-shadow:var(--shadow)}
-.kpi .n{font-size:27px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
-.kpi .l{font-size:12px;color:var(--ink-soft);margin-top:5px}
+
+/* ---------- Results ---------- */
+.summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:22px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--line-strong)}
+.kpi.ok::before{background:var(--ok)} .kpi.err::before{background:var(--err)} .kpi.warn::before{background:var(--warn-line)}
+.kpi .n{font-size:28px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.1}
+.kpi .l{font-size:12px;color:var(--ink-soft);margin-top:6px;font-weight:500}
 .kpi.ok .n{color:var(--ok)} .kpi.err .n{color:var(--err)} .kpi.warn .n{color:var(--warn)}
-.supcard{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:16px;overflow:hidden;box-shadow:var(--shadow)}
-.supcard.s-ok{border-left:5px solid var(--ok)}
-.supcard.s-warn{border-left:5px solid var(--warn-line)}
-.supcard.s-err{border-left:5px solid var(--err)}
-.suphead{display:flex;align-items:center;gap:12px;padding:15px 18px;cursor:pointer;flex-wrap:wrap}
-.suphead .chev{color:var(--ink-soft);font-size:13px;transition:transform .15s;flex:none}
+
+.supcard{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:14px;overflow:hidden;box-shadow:var(--shadow);transition:box-shadow .2s}
+.supcard:hover{box-shadow:var(--shadow-lg)}
+.supcard.s-ok{border-left:4px solid var(--ok)}
+.supcard.s-warn{border-left:4px solid var(--warn-line)}
+.supcard.s-err{border-left:4px solid var(--err)}
+.suphead{display:flex;align-items:center;gap:12px;padding:16px 20px;cursor:pointer;flex-wrap:wrap;user-select:none}
+.suphead:hover{background:#fcfbf8}
+.suphead .chev{font-size:0;width:22px;height:22px;border-radius:7px;background:var(--paper-2);display:grid;place-items:center;flex:none;transition:transform .2s}
+.suphead .chev::before{content:"";width:6px;height:6px;border-right:2px solid var(--ink-soft);border-bottom:2px solid var(--ink-soft);transform:rotate(-45deg);margin-left:-2px}
 .supcard.open .suphead .chev{transform:rotate(90deg)}
-.suphead h3{font-size:16px;flex:1;min-width:160px}
-.badge{font-size:11.5px;font-weight:700;padding:3px 11px;border-radius:20px;white-space:nowrap}
+.suphead h3{font-size:16px;font-weight:650;letter-spacing:-.01em;flex:1;min-width:160px}
+.badge{font-size:11.5px;font-weight:700;padding:4px 11px;border-radius:999px;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+.badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
 .badge.ok{background:var(--ok-bg);color:var(--ok)}
 .badge.warn{background:var(--warn-bg);color:var(--warn)}
 .badge.err{background:var(--err-bg);color:var(--err)}
-.suphead .meta{font-size:12.5px;color:var(--ink-soft);flex-basis:100%;margin-left:25px}
-.supbody{border-top:1px solid var(--line);padding:16px 18px;display:none}
+.suphead .meta{font-size:12.5px;color:var(--ink-soft);flex-basis:100%;margin-left:34px}
+.supbody{border-top:1px solid var(--line);padding:18px 20px 20px;display:none}
 .supcard.open .supbody{display:block}
-.flagsec{margin-bottom:6px}
-.flagline{display:flex;gap:9px;align-items:flex-start;font-size:13px;margin:5px 0}
-.flagline .dot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex:none}
+.flagsec{display:flex;flex-direction:column;gap:2px;margin-bottom:6px}
+.flagline{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;padding:3px 0}
+.flagline .dot{width:8px;height:8px;border-radius:50%;margin-top:6px;flex:none;box-shadow:0 0 0 3px rgba(0,0,0,.04)}
 .dot.err{background:var(--err)} .dot.warn{background:var(--warn-line)} .dot.ok{background:var(--ok)}
-.tblwrap{overflow-x:auto;margin-top:14px;border:1px solid var(--line);border-radius:10px}
-table{width:100%;border-collapse:collapse;font-size:12.5px}
-th{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);
-  text-align:left;padding:8px 9px;background:var(--paper);border-bottom:1px solid var(--line-strong);white-space:nowrap}
-td{padding:8px 9px;border-bottom:1px solid var(--line);vertical-align:top;font-variant-numeric:tabular-nums}
+.tblwrap{overflow-x:auto;margin-top:16px;border:1px solid var(--line);border-radius:12px}
+table{width:100%;border-collapse:collapse;font-size:12.8px}
+th{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);
+  text-align:left;padding:9px 10px;background:#faf8f4;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top;font-variant-numeric:tabular-nums}
+tbody tr:hover td{background:rgba(245,242,236,.55)}
 tr:last-child td{border-bottom:none}
+tfoot td{border-top:1px solid var(--line-strong)}
 td.num,th.num{text-align:right}
 td.c,th.c{text-align:center}
-tr.r-err{background:var(--err-bg)} tr.r-warn{background:var(--warn-bg)}
+tr.r-err td{background:var(--err-bg)} tr.r-warn td{background:var(--warn-bg)}
+tr.r-err:hover td{background:#f9e1dc} tr.r-warn:hover td{background:#fbeccb}
 .cellbad{color:var(--err);font-weight:700}
 .cellwarn{color:var(--warn);font-weight:700}
-.delta{font-weight:700;white-space:nowrap}
-.delta.bad{color:var(--err)} .delta.zero{color:var(--ink-soft);font-weight:400}
+.delta{font-weight:700;white-space:nowrap;font-size:11.5px;padding:2px 7px;border-radius:6px}
+.delta.bad{color:var(--err);background:rgba(195,48,31,.08)} .delta.zero{color:var(--ink-faint);font-weight:500}
 .artname{font-weight:600}
 .artsub{color:var(--ink-soft);font-size:11.5px}
-.notebox{margin-top:13px;font-size:12.5px;color:var(--ink-soft);background:var(--paper);border-radius:9px;padding:11px 13px}
-.notebox b{color:var(--ink)}
+td.art{min-width:220px}
+.mnote{display:table;margin-top:5px;font-size:11px;font-weight:600;color:#3d5a80;background:#eaf0f7;border:1px solid #d3deea;padding:2px 8px;border-radius:6px}
+.notebox{margin-top:14px;font-size:12.8px;color:var(--ink-soft);background:#faf8f4;border:1px solid var(--line);border-radius:11px;padding:12px 14px}
+.notebox b{color:var(--ink);font-weight:600}
 .notebox .row{margin:3px 0}
-.destrow{display:flex;gap:8px;align-items:flex-start;font-size:13px;margin-top:10px;padding:9px 12px;border-radius:9px}
-.destrow.ok{background:var(--ok-bg)} .destrow.bad{background:var(--err-bg)}
-.errmsg{color:var(--err);font-size:13px;padding:8px 0}
+.destrow{display:flex;gap:10px;align-items:flex-start;font-size:13px;margin-top:12px;padding:10px 13px;border-radius:11px;border:1px solid transparent}
+.destrow.ok{background:var(--ok-bg);border-color:var(--ok-line)} .destrow.bad{background:var(--err-bg);border-color:var(--err-line)}
+.errmsg{color:var(--err);font-size:13px;padding:4px 0}
 .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ink-soft);margin:14px 2px 0}
 .legend span{display:flex;align-items:center;gap:6px}
+.legend .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
 .hidden{display:none}
-@media (max-width:640px){ td,th{padding:6px 6px} main{padding:18px 11px 70px} .brandrow{flex-wrap:wrap} nav.tabs{overflow-x:auto} }
+footer.foot{max-width:1160px;margin:0 auto;padding:0 24px 34px;font-size:11.5px;color:var(--ink-faint);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+@media (max-width:720px){
+  .brandrow .co{display:none}
+  main{padding:24px 16px 72px} .hwrap{padding:0 16px}
+  .pagehead h1{font-size:22px}
+  nav.tabs{overflow-x:auto;scrollbar-width:none} nav.tabs::-webkit-scrollbar{display:none}
+  td,th{padding:7px 7px} .panel{padding:16px}
+  .suphead .meta{margin-left:0}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 <header>
+  <div class="hwrap">
   <div class="brandrow">
-    <div class="logo"><span>SERCHIO</span> · Suite Controlli</div>
-    <div class="tag">Verifica documenti d'acquisto e fatture fornitori</div>
+    <div class="mark">S</div>
+    <div>
+      <div class="logo"><span>SERCHIO</span> · Suite Controlli</div>
+      <div class="tag">Verifica documenti d'acquisto e fatture fornitori</div>
+    </div>
+    <div class="co">Serchio Distribuzione S.r.l.<br>Strumenti interni</div>
   </div>
   <nav class="tabs" id="tabs">
-    <button data-view="t1" class="active">Conferme d'Ordine</button>
-    <button data-view="t2">Fatture Fornitore</button>
-    <button data-view="t3" disabled>Fatture Estere <span class="soon">in arrivo</span></button>
+    <button data-view="t1" class="active"><svg class="i" viewBox="0 0 24 24"><path d="M9 4h6l1 2h3v14H5V6h3z"/><path d="m9 13 2 2 4-4"/></svg>Conferme d'Ordine</button>
+    <button data-view="t2"><svg class="i" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Fatture Fornitore</button>
+    <button data-view="t3" disabled><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Fatture Estere <span class="soon">in arrivo</span></button>
   </nav>
+  </div>
 </header>
 <main>
 <section class="view active" id="t1">
+  <div class="pagehead">
+  <div class="eyebrow">Controllo 1</div>
+  <h1>Ordini vs conferme fornitore</h1>
   <p class="intro">Confronta ogni ordine d'acquisto Serchio con la relativa conferma del fornitore, riga per riga. Verifica dati commerciali (quantità, prezzo netto, sconto, totale) e tecnici (grammatura, altezza, diametro, foro), oltre alla destinazione merce. Gestisce conferme cumulative che evadono più ordini e ordini coperti da più conferme.</p>
+  <div class="checks"><span>Quantità</span><span>Prezzo netto</span><span>Sconto</span><span>Totale</span><span>Grammatura</span><span>Altezza</span><span>Diametro e foro</span><span>Destinazione</span></div>
+  </div>
   <div class="panel">
     <div class="drop" id="drop">
-      <div class="ic">⬆</div>
+      <div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></div>
       <strong>Trascina qui i PDF oppure clicca per selezionarli</strong>
       <small>Ordini Serchio e conferme fornitori, anche come file separati o combinati. L'abbinamento è automatico.</small>
       <input type="file" id="fileinput" accept="application/pdf" multiple class="hidden">
     </div>
     <div class="filelist" id="filelist"></div>
     <div class="controls">
-      <button class="primary" id="run" disabled>Avvia controllo</button>
-      <label>Codice di accesso <input type="password" id="access" placeholder="&#9679;&#9679;&#9679;&#9679;&#9679;&#9679;"></label>
-      <button class="ghost hidden" id="csv">Esporta report CSV</button>
-      <span class="hint">Criterio: corrispondenza esatta. I dati commerciali in rosso sono bloccanti; i dati tecnici in giallo vanno verificati ma non bloccano.</span>
+      <button class="primary" id="run" disabled>Avvia controllo<svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
+      <label><svg class="i" viewBox="0 0 24 24" style="width:15px;height:15px"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Codice di accesso <input type="password" id="access" placeholder="Inserisci il codice"></label>
+      <button class="ghost hidden" id="csv"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>Esporta report CSV</button>
+      <span class="hint"><span><b>Criterio:</b> corrispondenza esatta</span><span class="r">● Commerciali in rosso: bloccanti</span><span class="y">● Tecnici in giallo: da verificare</span></span>
     </div>
   </div>
   <div class="summary hidden" id="summary">
@@ -155,20 +236,25 @@ tr.r-err{background:var(--err-bg)} tr.r-warn{background:var(--warn-bg)}
   <div id="results"></div>
 </section>
 <section class="view" id="t2">
+  <div class="pagehead">
+  <div class="eyebrow">Controllo 2</div>
+  <h1>Fatture fornitore UE vs conferme</h1>
   <p class="intro">Confronta ogni fattura fornitore UE con la relativa conferma d&apos;ordine. Verifica grammatura (incluso PE per carta accoppiata), altezza, foro/anima, quantit&agrave;, prezzo EUR/ton, codice nomenclatura doganale, massa netta Intrastat, indirizzo di consegna, P.IVA Serchio e condizioni di pagamento. Tolleranza: zero &mdash; i valori devono essere identici.</p>
+  <div class="checks"><span>Grammatura e PE</span><span>Altezza</span><span>Foro</span><span>Quantità</span><span>Prezzo EUR/ton</span><span>Cod. nomenclatura</span><span>Massa Intrastat</span><span>P.IVA</span><span>Pagamento</span></div>
+  </div>
   <div class="panel">
     <div class="drop" id="drop2">
-      <div class="ic">&#11014;</div>
+      <div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></div>
       <strong>Trascina qui i PDF oppure clicca per selezionarli</strong>
       <small>Fatture e conferme d&apos;ordine fornitori UE, anche file separati o combinati. L&apos;abbinamento &egrave; automatico per numero ordine Serchio.</small>
       <input type="file" id="fileinput2" accept="application/pdf" multiple class="hidden">
     </div>
     <div class="filelist" id="filelist2"></div>
     <div class="controls">
-      <button class="primary" id="run2" disabled>Avvia controllo</button>
-      <label>Codice di accesso <input type="password" id="access2" placeholder="&#9679;&#9679;&#9679;&#9679;&#9679;&#9679;"></label>
-      <button class="ghost hidden" id="csv2">Esporta report CSV</button>
-      <span class="hint">Campi in rosso = discrepanza bloccante &bull; Campi in giallo = dato tecnico da verificare &bull; Tolleranza: zero su tutti i campi</span>
+      <button class="primary" id="run2" disabled>Avvia controllo<svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
+      <label><svg class="i" viewBox="0 0 24 24" style="width:15px;height:15px"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Codice di accesso <input type="password" id="access2" placeholder="Inserisci il codice"></label>
+      <button class="ghost hidden" id="csv2"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>Esporta report CSV</button>
+      <span class="hint"><span><b>Tolleranza:</b> zero su tutti i campi</span><span class="r">● Rosso: discrepanza bloccante</span><span class="y">● Giallo: dato tecnico da verificare</span></span>
     </div>
   </div>
   <div class="summary hidden" id="summary2">
@@ -181,12 +267,13 @@ tr.r-err{background:var(--err-bg)} tr.r-warn{background:var(--warn-bg)}
   <div id="results2"></div></section>
 <section class="view" id="t3">
   <div class="placeholder">
-    <div class="ic">🌍</div>
+    <div class="ic"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></div>
     <h2>Controllo Fatture Fornitore Estere</h2>
     <p>Sottotool in sviluppo. Dedicato ai fornitori extra-UE: confronto con la conferma d'ordine, dazi, valuta, Incoterms e documenti doganali. In arrivo dopo i primi due strumenti.</p>
   </div>
 </section>
 </main>
+<footer class="foot"><span>Serchio Distribuzione S.r.l. · Suite Controlli</span><span>Lettura documenti con Claude (Anthropic)</span></footer>
 <script>
 const $ = id => document.getElementById(id);
 const BACKEND_URL = 'https://serkios-controllo-conferme-production.up.railway.app';
@@ -303,6 +390,9 @@ function mergeRows(rows, opts){
     return m;
   });
 }
+function noteHtml(notes){
+  return (notes || []).map(n => `<span class="mnote">${n}</span>`).join('');
+}
 function partsNote(r, who){
   if (!r?._parts) return '';
   return `${who}: ${r._parts.length} righe unite (${r._parts.map(fmtNum0).join(' + ')} kg)`;
@@ -375,7 +465,7 @@ function evaluate(ordKey, ord, confLines, meta){
   const rows = pairs.map(({ o, c }) => {
     const name = (o?.desc || c?.desc || '');
     const notes = [partsNote(o, 'Ordine'), partsNote(c, 'Conferma')].filter(Boolean);
-    const sub = `${o?.gram ?? c?.gram ?? '?'} g · H ${o?.largh_cm ?? c?.largh_cm ?? '?'} cm` + (notes.length ? ' · ' + notes.join(' · ') : '');
+    const sub = `${o?.gram ?? c?.gram ?? '?'} g · H ${o?.largh_cm ?? c?.largh_cm ?? '?'} cm`;
     const cells = {}; let rErr = false, rWarn = false;
     if (mergeFlags(o, 'Ordine', name, '€/kg', v => fmtN(v, 3), LABELS1, flagsWarn)) rWarn = true;
     if (mergeFlags(c, 'Conferma', name, '€/kg', v => fmtN(v, 3), LABELS1, flagsWarn)) rWarn = true;
@@ -398,7 +488,7 @@ function evaluate(ordKey, ord, confLines, meta){
         flagsWarn.push(`Grammatura ${name}: ${o.gram} → ${c.gram} g/m²`); }
     }
     if (rErr) sevC = true; if (rWarn) sevT = true;
-    return { o, c, name, sub, dq, dp, cells, rErr, rWarn };
+    return { o, c, name, sub, notes, dq, dp, cells, rErr, rWarn };
   });
   const totO = ord.totale;
   const totC = confLines.reduce((s, l) => s + (l.p_eur_kg && l.q_kg ? l.p_eur_kg * l.q_kg : 0), 0) || null;
@@ -476,7 +566,7 @@ function card(key, ev){
   const nums = [...ev.meta.nums];
   const rowsHtml = ev.rows.map(l => `
     <tr class="${l.rErr?'r-err':l.rWarn?'r-warn':''}">
-      <td><span class="artname">${l.name||'—'}</span><br><span class="artsub">${l.sub}</span></td>
+      <td class="art"><span class="artname">${l.name||'—'}</span><br><span class="artsub">${l.sub}</span>${noteHtml(l.notes)}</td>
       <td class="num ${l.cells.q?'cellbad':''}">${fmtNum0(l.o?.q_kg)}</td>
       <td class="num ${l.cells.q?'cellbad':''}">${fmtNum0(l.c?.q_kg)}</td>
       <td class="num">${fmtDelta(l.dq)}</td>
@@ -730,7 +820,7 @@ function evaluate2(key, fat, conf) {
     const name = f?.desc || c?.desc || '—';
     const gramStr = `${f?.gram_carta ?? c?.gram_carta ?? '?'}${(f?.gram_pe || c?.gram_pe) ? '+' + (f?.gram_pe ?? c?.gram_pe) + ' PE' : ''} g/m²`;
     const notes = [partsNote(f, 'Fattura'), partsNote(c, 'Conferma')].filter(Boolean);
-    const sub = `${gramStr} · H ${f?.largh_mm ?? c?.largh_mm ?? '?'} mm` + (notes.length ? ' · ' + notes.join(' · ') : '');
+    const sub = `${gramStr} · H ${f?.largh_mm ?? c?.largh_mm ?? '?'} mm`;
     const cells = {}; let rErr = false, rWarn = false;
     const fP = v => v == null ? '—' : v.toLocaleString('it-IT', { maximumFractionDigits: 2 });
     if (mergeFlags(f, 'Fattura', name, 'EUR/ton', fP, LABELS2, flagsWarn)) rWarn = true;
@@ -750,7 +840,7 @@ function evaluate2(key, fat, conf) {
       if (cnf && cnc && !eqStr2(cnf, cnc)) { rErr = true; cells.cn = 1; flagsErr.push(`Cod. nomenclatura ${name}: fat. "${cnf}" → conf. "${cnc}"`); }
     }
     if (rErr) sevC = true; if (rWarn) sevT = true;
-    return { f, c, name, sub, cells, rErr, rWarn };
+    return { f, c, name, sub, notes, cells, rErr, rWarn };
   });
   return { fat, conf, rows, flagsErr, flagsWarn, sevC, sevT, pivaOk, destOk, pagOk };
 }
@@ -808,11 +898,11 @@ function card2(key, ev, missingConf) {
     : sevC ? '<span class="badge err">discrepanze</span>'
     : sevT ? '<span class="badge warn">da verificare</span>'
     : '<span class="badge ok">conforme</span>';
-  const rowsHtml = rows.map(({ f, c, name, sub, cells, rErr, rWarn }) => {
+  const rowsHtml = rows.map(({ f, c, name, sub, notes, cells, rErr, rWarn }) => {
     const showPE = f?.gram_pe != null || c?.gram_pe != null;
     const fN = (v, dec = 2) => v == null ? '—' : v.toLocaleString('it-IT', { minimumFractionDigits: dec, maximumFractionDigits: dec });
     return `<tr class="${rErr ? 'r-err' : rWarn ? 'r-warn' : ''}">
-      <td><span class="artname">${name}</span><br><span class="artsub">${sub}</span></td>
+      <td class="art"><span class="artname">${name}</span><br><span class="artsub">${sub}</span>${noteHtml(notes)}</td>
       <td class="num ${cells.gram_carta ? 'cellbad' : ''}">${f?.gram_carta ?? '—'}${showPE ? `<br><span class="artsub">${f?.gram_pe ?? '—'} PE</span>` : ''}</td>
       <td class="num ${cells.gram_carta ? 'cellbad' : ''}">${c?.gram_carta ?? '—'}${showPE ? `<br><span class="artsub">${c?.gram_pe ?? '—'} PE</span>` : ''}</td>
       <td class="num ${cells.largh_mm ? 'cellbad' : ''}">${f?.largh_mm ?? '—'}</td>
