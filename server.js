@@ -175,7 +175,7 @@ PAGAMENTO (pagamento): testo esatto delle condizioni.
 RIGHE: includi TUTTE le righe merce, una per una, così come compaiono nel documento (non unirle e non sommarle).` + FORMAT_NOTE;
 
 // ---------- Chiamata al modello ----------
-async function callAI(pdf, prompt, schema) {
+async function callAI(content, schema) {
   const stream = client.beta.messages.stream({
     model: MODEL,
     max_tokens: MAX_TOKENS,
@@ -185,10 +185,7 @@ async function callAI(pdf, prompt, schema) {
     output_config: { format: { type: 'json_schema', schema } },
     messages: [{
       role: 'user',
-      content: [
-        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdf } },
-        { type: 'text', text: prompt },
-      ],
+      content,
     }],
   });
   const msg = await stream.finalMessage();
@@ -233,6 +230,10 @@ function checkAuth(req, res) {
     res.status(401).json({ error: 'Codice di accesso errato.' });
     return false;
   }
+  return true;
+}
+
+function hasPdf(req, res) {
   if (!req.body?.pdf || typeof req.body.pdf !== 'string') {
     res.status(400).json({ error: 'Nessun PDF ricevuto.' });
     return false;
@@ -242,9 +243,12 @@ function checkAuth(req, res) {
 
 function route(prompt, schema) {
   return async (req, res) => {
-    if (!checkAuth(req, res)) return;
+    if (!checkAuth(req, res) || !hasPdf(req, res)) return;
     try {
-      const parsed = await callAI(req.body.pdf, prompt, schema);
+      const parsed = await callAI([
+        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: req.body.pdf } },
+        { type: 'text', text: prompt },
+      ], schema);
       res.json({ documenti: parsed.documenti || [] });
     } catch (e) {
       console.error('Estrazione non riuscita:', e);
@@ -257,6 +261,53 @@ function route(prompt, schema) {
 app.post('/api/analizza', route(PROMPT1, SCHEMA1));
 // Tool 2 — Fatture Fornitore
 app.post('/api/analizza2', route(PROMPT2, SCHEMA2));
+
+// ---------- Abbinamento intelligente delle righe ----------
+// Dopo l'estrazione, l'AI abbina le righe dei due documenti come farebbe una persona:
+// descrizioni scritte in modo diverso, dati mancanti, prodotti spezzati su più righe.
+const MATCH_SCHEMA = obj({
+  gruppi: {
+    type: 'array',
+    items: obj({
+      a: { type: 'array', items: { type: 'integer' } },
+      b: { type: 'array', items: { type: 'integer' } },
+      motivo: { type: 'string' },
+    }),
+  },
+  testi: {
+    type: 'array',
+    items: obj({ campo: { type: 'string' }, equivalenti: { type: 'boolean' }, nota: { type: 'string' } }),
+  },
+});
+
+const MATCH_PROMPT = (labelA, labelB) => `Sei un esperto acquisti nel settore carta. Ti do le righe merce di due documenti dello stesso ordine: A = ${labelA}, B = ${labelB}. I dati sono già stati estratti dai PDF, quindi possono contenere piccole imprecisioni di lettura.
+
+COMPITO 1 — Abbina le righe di A con le righe di B che si riferiscono allo STESSO prodotto, ragionando come una persona che confronta i due fogli:
+- le descrizioni possono essere scritte in modo diverso (lingua, abbreviazioni, codici articolo, nome commerciale);
+- un dato può mancare in uno dei due documenti, o essere scritto in un'altra unità (mm/cm, kg/t);
+- un prodotto può essere SPEZZATO in più righe nell'altro documento (es. 5.000 kg in A = 2.000 + 3.000 kg in B): in quel caso metti tutte quelle righe nello stesso gruppo;
+- abbina in base a tipo di carta, grammatura, formato/altezza, diametro/foro, prezzo e quantità; la quantità può anche essere diversa (sarà poi segnalata), ma il prodotto deve essere lo stesso;
+- NON abbinare prodotti davvero diversi; una riga che non ha corrispondenza non va messa in nessun gruppo;
+- ogni indice può comparire al massimo in un gruppo. "motivo": breve spiegazione in italiano.
+
+COMPITO 2 — Per ogni coppia di testi in "testi_da_confrontare", indica se hanno lo STESSO SIGNIFICATO (es. "30 days net" e "30 gg data fattura" sì; due indirizzi dello stesso stabilimento scritti in modo diverso sì; città o condizioni diverse no). "nota": breve spiegazione in italiano se non sono equivalenti, altrimenti "".
+
+DATI:
+`;
+
+app.post('/api/abbina', async (req, res) => {
+  if (!checkAuth(req, res)) return;
+  const { a, b, labelA, labelB, testi } = req.body || {};
+  if (!Array.isArray(a) || !Array.isArray(b)) return res.status(400).json({ error: 'Dati mancanti.' });
+  try {
+    const dati = JSON.stringify({ A: a, B: b, testi_da_confrontare: testi || [] });
+    const out = await callAI([{ type: 'text', text: MATCH_PROMPT(labelA || 'ordine', labelB || 'conferma') + dati }], MATCH_SCHEMA);
+    res.json(out);
+  } catch (e) {
+    console.error('Abbinamento non riuscito:', e);
+    res.status(422).json({ error: 'Abbinamento non riuscito: ' + describeError(e) });
+  }
+});
 
 // Pagina del tool: servita direttamente da Railway (non serve più Vercel)
 app.get('/', (_, res) => res.sendFile(path.join(__dirname, 'index.html')));

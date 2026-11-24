@@ -436,6 +436,48 @@ function pairRows(A, B, opts){
   B.forEach((b, j) => { if (!usedB.has(j)) out.push({ a: null, b, i: Infinity }); });
   return out.sort((x, y) => x.i - y.i);
 }
+// ---- Abbinamento intelligente (AI) ----
+// Chiede all'AI di abbinare le righe come farebbe una persona; null se non disponibile.
+async function aiMatch(labelA, labelB, A, B, testi, accessId){
+  try {
+    const resp = await fetch(BACKEND_URL + '/api/abbina', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: $(accessId).value.trim(), labelA, labelB, a: A, b: B, testi })
+    });
+    const d = await resp.json();
+    return (!resp.ok || d.error || !Array.isArray(d.gruppi)) ? null : d;
+  } catch (e) { return null; }
+}
+const compactRows = (rows, fields) => rows.map((r, i) => {
+  const o = { i };
+  for (const f of fields) if (r[f] != null && r[f] !== '') o[f] = r[f];
+  return o;
+});
+// Costruisce le coppie dai gruppi dell'AI; le righe non abbinate restano da sole.
+function pairsFromGroups(A, B, gruppi, opts){
+  const usedA = new Set(), usedB = new Set(), out = [];
+  const ok = (arr, len, used) => [...new Set((arr || []).filter(i => Number.isInteger(i) && i >= 0 && i < len && !used.has(i)))];
+  for (const g of gruppi || []){
+    const ia = ok(g.a, A.length, usedA), ib = ok(g.b, B.length, usedB);
+    if (!ia.length && !ib.length) continue;
+    ia.forEach(i => usedA.add(i)); ib.forEach(j => usedB.add(j));
+    out.push({
+      a: ia.length ? mergeGroup(ia.map(i => A[i]), opts) : null,
+      b: ib.length ? mergeGroup(ib.map(j => B[j]), opts) : null,
+      i: ia.length ? Math.min(...ia) : Infinity, motivo: g.motivo || null,
+    });
+  }
+  A.forEach((a, i) => { if (!usedA.has(i)) out.push({ a, b: null, i }); });
+  B.forEach((b, j) => { if (!usedB.has(j)) out.push({ a: null, b, i: Infinity }); });
+  return out.sort((x, y) => x.i - y.i);
+}
+const textVerdict = (m, campo) => (m && Array.isArray(m.testi)) ? m.testi.find(t => t.campo === campo) || null : null;
+const AI_OFF = 'Abbinamento intelligente non disponibile: righe abbinate con il confronto a regole (più rigido).';
+function showMatching(boxId){
+  $(boxId).innerHTML = '<div class="panel" style="display:flex;align-items:center;gap:12px"><span class="f"><span class="spin"></span></span>' +
+    '<span>Confronto delle righe in corso: l\'AI sta abbinando i prodotti dei due documenti…</span></div>';
+}
+
 function noteHtml(notes){
   return (notes || []).map(n => `<span class="mnote">${n}</span>`).join('');
 }
@@ -489,9 +531,31 @@ function lineKey(r){ return `${Math.round(r.gram||0)}|${Math.round((r.largh_cm||
 const TECH = [['diam_cm','Diametro',0],['foro_cm','Foro',1]];
 const MERGE1 = { match: lineKey, price: 'p_eur_kg', sum: ['q_kg'], same: ['diam_cm', 'foro_cm'] };
 const LABELS1 = { diam_cm: 'diametro', foro_cm: 'foro' };
+const matches1 = new Map();
+const FIELDS1 = ['desc', 'gram', 'largh_cm', 'diam_cm', 'foro_cm', 'q_kg', 'p_eur_kg'];
+async function prepareMatches1(){
+  matches1.clear();
+  const { orders, confLinesByOrder, confMeta } = buildGroups();
+  const jobs = [];
+  for (const [key, ord] of orders){
+    const lines = confLinesByOrder.get(key);
+    if (!lines || !lines.length) continue;
+    const meta = confMeta.get(key), testi = [];
+    const dConf = [...meta.destinazione][0], pConf = [...meta.pagamento][0];
+    if (ord.destinazione && dConf) testi.push({ campo: 'destinazione', A: ord.destinazione, B: dConf });
+    if (ord.pagamento && pConf) testi.push({ campo: 'pagamento', A: ord.pagamento, B: pConf });
+    jobs.push(aiMatch('ordine d\'acquisto Serchio', 'conferma d\'ordine del fornitore',
+      compactRows(ord.righe || [], FIELDS1), compactRows(lines, FIELDS1), testi, 'access')
+      .then(r => matches1.set(key, r)));
+  }
+  await Promise.all(jobs);
+}
 function evaluate(ordKey, ord, confLines, meta){
-  const pairs = pairRows(ord.righe || [], confLines, MERGE1).map(({ a, b }) => ({ o: a, c: b }));
+  const m = matches1.get(ordKey);
+  const pairs = (m ? pairsFromGroups(ord.righe || [], confLines, m.gruppi, MERGE1) : pairRows(ord.righe || [], confLines, MERGE1))
+    .map(({ a, b }) => ({ o: a, c: b }));
   const flagsErr = [], flagsWarn = [];
+  if (matches1.size && !m) flagsWarn.push(AI_OFF);
   let sevC = false, sevT = false;
   const rows = pairs.map(({ o, c }) => {
     const name = (o?.desc || c?.desc || '');
@@ -530,10 +594,13 @@ function evaluate(ordKey, ord, confLines, meta){
   const dOrd = (ord.destinazione || '').trim();
   const dConf = [...meta.destinazione][0] || '';
   if (dOrd || dConf){
-    const ok = normDest(dOrd) && normDest(dConf) && normDest(dOrd) === normDest(dConf);
+    const v = textVerdict(m, 'destinazione');
+    const ok = v ? v.equivalenti : Boolean(normDest(dOrd) && normDest(dConf) && normDest(dOrd) === normDest(dConf));
     dest = { ok, dOrd: dOrd || '—', dConf: dConf || '—' };
-    if (!ok && dOrd && dConf){ sevC = true; flagsErr.push(`Destinazione merce diversa tra ordine e conferma`); }
+    if (!ok && dOrd && dConf){ sevC = true; flagsErr.push(`Destinazione merce diversa tra ordine e conferma` + (v && v.nota ? `: ${v.nota}` : '')); }
   }
+  const vp = textVerdict(m, 'pagamento');
+  if (vp && !vp.equivalenti){ sevT = true; flagsWarn.push(`Condizioni di pagamento diverse` + (vp.nota ? `: ${vp.nota}` : '')); }
   return { ord, rows, flagsErr, flagsWarn, sevC, sevT, totO, totC, dt, dest, meta };
 }
 function normDest(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'').replace(/srl|spa|snc|ditta|sas/g,'') || null; }
@@ -546,6 +613,8 @@ $('run').addEventListener('click', async () => {
     catch (err){ entry.status = 'fail'; entry.error = err.message; }
     renderFiles();
   }
+  showMatching('results');
+  await prepareMatches1();
   renderResults();
   $('csv').classList.remove('hidden');
 });
@@ -811,27 +880,53 @@ const MERGE2 = { match: lineKey2, price: 'prezzo_eur_ton',
   sum: ['q_kg', 'importo_eur'], same: ['gram_pe', 'diam_mm', 'foro_mm', 'cod_nomenclatura_riga'] };
 const LABELS2 = { gram_pe: 'grammatura PE', diam_mm: 'diametro', foro_mm: 'foro', cod_nomenclatura_riga: 'codice nomenclatura' };
 
+const matches2 = new Map();
+const FIELDS2 = ['desc', 'gram_carta', 'gram_pe', 'largh_mm', 'diam_mm', 'foro_mm', 'q_kg', 'prezzo_eur_ton'];
+async function prepareMatches2(){
+  matches2.clear();
+  const { fatture, conferme } = buildGroups2();
+  const jobs = [];
+  for (const [key, fat] of fatture){
+    const conf = conferme.get(key);
+    if (!conf) continue;
+    const testi = [];
+    if (fat.indirizzo_consegna && conf.indirizzo_consegna) testi.push({ campo: 'indirizzo_consegna', A: fat.indirizzo_consegna, B: conf.indirizzo_consegna });
+    if (fat.pagamento && conf.pagamento) testi.push({ campo: 'pagamento', A: fat.pagamento, B: conf.pagamento });
+    jobs.push(aiMatch('fattura del fornitore', 'conferma d\'ordine del fornitore',
+      compactRows(fat.righe || [], FIELDS2), compactRows(conf.righe || [], FIELDS2), testi, 'access2')
+      .then(r => matches2.set(key, r)));
+  }
+  await Promise.all(jobs);
+}
+const digits = s => String(s || '').replace(/\D/g, '');
 function evaluate2(key, fat, conf) {
   const flagsErr = [], flagsWarn = [];
   let sevC = false, sevT = false;
-  const pivaOk = fat.piva_buyer === 'IT05147461007';
+  const m = conf ? matches2.get(key) : null;
+  if (conf && matches2.size && !m) flagsWarn.push(AI_OFF);
+  const pivaOk = digits(fat.piva_buyer).endsWith('05147461007');
   if (!pivaOk) { sevC = true; flagsErr.push(`P.IVA Serchio in fattura errata: "${fat.piva_buyer || 'assente'}" (attesa IT05147461007)`); }
   let destOk = null;
   if (fat.indirizzo_consegna && conf && conf.indirizzo_consegna) {
-    destOk = eqStr2(fat.indirizzo_consegna, conf.indirizzo_consegna);
-    if (!destOk) { sevC = true; flagsErr.push(`Indirizzo consegna diverso — Fattura: "${fat.indirizzo_consegna}" · Conferma: "${conf.indirizzo_consegna}"`); }
+    const v = textVerdict(m, 'indirizzo_consegna');
+    destOk = v ? v.equivalenti : eqStr2(fat.indirizzo_consegna, conf.indirizzo_consegna);
+    if (!destOk) { sevC = true; flagsErr.push(`Indirizzo consegna diverso — Fattura: "${fat.indirizzo_consegna}" · Conferma: "${conf.indirizzo_consegna}"` + (v && v.nota ? ` (${v.nota})` : '')); }
   }
   let pagOk = null;
   if (fat.pagamento && conf && conf.pagamento) {
-    pagOk = eqStr2(fat.pagamento, conf.pagamento);
-    if (!pagOk) { sevC = true; flagsErr.push(`Cond. pagamento diverse — Fattura: "${fat.pagamento}" · Conferma: "${conf.pagamento}"`); }
+    const v = textVerdict(m, 'pagamento');
+    pagOk = v ? v.equivalenti : eqStr2(fat.pagamento, conf.pagamento);
+    if (!pagOk) { sevC = true; flagsErr.push(`Cond. pagamento diverse — Fattura: "${fat.pagamento}" · Conferma: "${conf.pagamento}"` + (v && v.nota ? ` (${v.nota})` : '')); }
   }
   if (fat.cod_nomenclatura && conf && conf.cod_nomenclatura) {
-    if (!eqStr2(fat.cod_nomenclatura, conf.cod_nomenclatura)) {
-      sevC = true; flagsErr.push(`Cod. nomenclatura diverso — Fattura: "${fat.cod_nomenclatura}" · Conferma: "${conf.cod_nomenclatura}"`);
+    const a = digits(fat.cod_nomenclatura), b = digits(conf.cod_nomenclatura);
+    if (a !== b) {
+      if (a && b && (a.startsWith(b) || b.startsWith(a))) { sevT = true; flagsWarn.push(`Cod. nomenclatura scritto con livello di dettaglio diverso — Fattura: "${fat.cod_nomenclatura}" · Conferma: "${conf.cod_nomenclatura}"`); }
+      else { sevC = true; flagsErr.push(`Cod. nomenclatura diverso — Fattura: "${fat.cod_nomenclatura}" · Conferma: "${conf.cod_nomenclatura}"`); }
     }
   }
-  const pairs = pairRows(fat.righe || [], conf ? (conf.righe || []) : [], MERGE2).map(({ a, b }) => ({ f: a, c: b }));
+  const A2 = fat.righe || [], B2 = conf ? (conf.righe || []) : [];
+  const pairs = (m ? pairsFromGroups(A2, B2, m.gruppi, MERGE2) : pairRows(A2, B2, MERGE2)).map(({ a, b }) => ({ f: a, c: b }));
   const rows = pairs.map(({ f, c }) => {
     const name = f?.desc || c?.desc || '—';
     const gramStr = `${f?.gram_carta ?? c?.gram_carta ?? '?'}${(f?.gram_pe || c?.gram_pe) ? '+' + (f?.gram_pe ?? c?.gram_pe) + ' PE' : ''} g/m²`;
@@ -853,7 +948,7 @@ function evaluate2(key, fat, conf) {
       if (f.prezzo_eur_ton != null && c.prezzo_eur_ton != null && !eqNum2(f.prezzo_eur_ton, c.prezzo_eur_ton, 0.01)) { rErr = true; cells.prezzo_eur_ton = 1; flagsErr.push(`Prezzo ${name}: fat. ${f.prezzo_eur_ton} → conf. ${c.prezzo_eur_ton} EUR/ton`); }
       const cnf = f.cod_nomenclatura_riga || fat.cod_nomenclatura;
       const cnc = c.cod_nomenclatura_riga || (conf && conf.cod_nomenclatura);
-      if (cnf && cnc && !eqStr2(cnf, cnc)) { rErr = true; cells.cn = 1; flagsErr.push(`Cod. nomenclatura ${name}: fat. "${cnf}" → conf. "${cnc}"`); }
+      if (cnf && cnc && digits(cnf) !== digits(cnc) && !(digits(cnf).startsWith(digits(cnc)) || digits(cnc).startsWith(digits(cnf)))) { rErr = true; cells.cn = 1; flagsErr.push(`Cod. nomenclatura ${name}: fat. "${cnf}" → conf. "${cnc}"`); }
     }
     if (rErr) sevC = true; if (rWarn) sevT = true;
     return { f, c, name, sub, notes, cells, rErr, rWarn };
@@ -870,6 +965,8 @@ $('run2').addEventListener('click', async () => {
     catch (err) { entry.status = 'fail'; entry.error = err.message; }
     renderFiles2();
   }
+  showMatching('results2');
+  await prepareMatches2();
   renderResults2();
   $('csv2').classList.remove('hidden');
 });
