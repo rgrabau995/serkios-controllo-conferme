@@ -355,40 +355,86 @@ function fmtDelta(p){
 }
 const near = (a, b) => (a == null || b == null) ? false : Math.abs(a - b) <= DIMEPS + 1e-9;
 const round3 = v => Math.round(v * 1000) / 1000;
-// Unisce le righe con lo stesso articolo/specifica prima del confronto,
-// es. 5.000 kg in ordine contro 2.000 + 3.000 kg in conferma/fattura.
-// opts: key (funzione chiave), price (campo prezzo), sum (campi da sommare), same (campi che dovrebbero coincidere)
-function mergeRows(rows, opts){
-  const groups = new Map();
-  for (const r of rows){
-    const k = opts.key(r);
-    if (!groups.has(k)) groups.set(k, []);
-    groups.get(k).push(r);
+// Unisce un gruppo di righe in una sola (somma quantità/importi, prezzo medio ponderato se diverso).
+// opts: price (campo prezzo), sum (campi da sommare), same (campi che dovrebbero coincidere)
+function mergeGroup(g, opts){
+  if (g.length === 1) return g[0];
+  const m = { ...g[0], _parts: g.map(r => r.q_kg), _priceMix: null, _conflicts: [] };
+  for (const f of opts.sum){
+    const vals = g.map(r => r[f]).filter(v => v != null);
+    m[f] = vals.length ? round3(vals.reduce((a, b) => a + b, 0)) : null;
   }
-  return [...groups.values()].map(g => {
-    if (g.length === 1) return g[0];
-    const m = { ...g[0], _parts: g.map(r => r.q_kg), _priceMix: null, _conflicts: [] };
-    for (const f of opts.sum){
-      const vals = g.map(r => r[f]).filter(v => v != null);
-      m[f] = vals.length ? round3(vals.reduce((a, b) => a + b, 0)) : null;
+  const pr = g.filter(r => r[opts.price] != null);
+  if (pr.length){
+    const p0 = pr[0][opts.price];
+    if (pr.every(r => Math.abs(r[opts.price] - p0) < 1e-9)) m[opts.price] = p0;
+    else {
+      const kg = pr.reduce((s, r) => s + (r.q_kg || 0), 0);
+      m[opts.price] = kg ? round3(pr.reduce((s, r) => s + r[opts.price] * (r.q_kg || 0), 0) / kg) : p0;
+      m._priceMix = pr.map(r => r[opts.price]);
     }
-    const pr = g.filter(r => r[opts.price] != null);
-    if (pr.length){
-      const p0 = pr[0][opts.price];
-      if (pr.every(r => Math.abs(r[opts.price] - p0) < 1e-9)) m[opts.price] = p0;
-      else {
-        const kg = pr.reduce((s, r) => s + (r.q_kg || 0), 0);
-        m[opts.price] = kg ? round3(pr.reduce((s, r) => s + r[opts.price] * (r.q_kg || 0), 0) / kg) : p0;
-        m._priceMix = pr.map(r => r[opts.price]);
-      }
-    }
-    for (const f of opts.same){
-      const vals = [...new Set(g.map(r => r[f]).filter(v => v != null && v !== ''))];
-      m[f] = vals.length ? vals[0] : null;
-      if (vals.length > 1) m._conflicts.push(f);
-    }
-    return m;
+  }
+  for (const f of opts.same){
+    const vals = [...new Set(g.map(r => r[f]).filter(v => v != null && v !== ''))];
+    m[f] = vals.length ? vals[0] : null;
+    if (vals.length > 1) m._conflicts.push(f);
+  }
+  return m;
+}
+const TOLQ = 0.5; // kg
+// Cerca il gruppo più piccolo (almeno 2 righe) la cui somma dà esattamente il target.
+function findSubset(cand, target){
+  const n = Math.min(cand.length, 14);
+  let best = null;
+  for (let mask = 1; mask < (1 << n); mask++){
+    if ((mask & (mask - 1)) === 0) continue;
+    let sum = 0; const pick = [];
+    for (let t = 0; t < n; t++) if (mask & (1 << t)){ sum += cand[t].r.q_kg; pick.push(cand[t]); }
+    if (Math.abs(sum - target) <= TOLQ && (!best || pick.length < best.length)) best = pick;
+  }
+  return best;
+}
+// Abbina le righe dei due documenti (A = ordine/fattura, B = conferma).
+// 1) stessa specifica e stessa quantità: abbinamento diretto, nessuna unione;
+// 2) solo se serve: una riga di un lato = somma di più righe dell'altro lato (es. 5.000 = 2.000 + 3.000);
+// 3) il resto: stessa specifica con la quantità più vicina (la differenza viene segnalata).
+function pairRows(A, B, opts){
+  const k = opts.match, out = [];
+  const usedA = new Set(), usedB = new Set();
+  A.forEach((a, i) => {
+    if (a.q_kg == null) return;
+    const j = B.findIndex((b, j) => !usedB.has(j) && k(b) === k(a) && b.q_kg != null && Math.abs(a.q_kg - b.q_kg) <= TOLQ);
+    if (j >= 0){ usedA.add(i); usedB.add(j); out.push({ a, b: B[j], i }); }
   });
+  const split = (X, Y, usedX, usedY, xIsA) => {
+    X.forEach((x, i) => {
+      if (usedX.has(i) || x.q_kg == null) return;
+      const cand = Y.map((r, j) => ({ r, j }))
+        .filter(({ r, j }) => !usedY.has(j) && k(r) === k(x) && r.q_kg != null && r.q_kg < x.q_kg + TOLQ);
+      const sub = findSubset(cand, x.q_kg);
+      if (!sub) return;
+      usedX.add(i); sub.forEach(({ j }) => usedY.add(j));
+      const m = mergeGroup(sub.map(s => s.r), opts);
+      if (xIsA) out.push({ a: x, b: m, i });
+      else out.push({ a: m, b: x, i: Math.min(...sub.map(s => s.j)) });
+    });
+  };
+  split(A, B, usedA, usedB, true);
+  split(B, A, usedB, usedA, false);
+  A.forEach((a, i) => {
+    if (usedA.has(i)) return;
+    let best = -1, bestScore = Infinity;
+    B.forEach((b, j) => {
+      if (usedB.has(j) || k(b) !== k(a)) return;
+      const score = Math.abs((b.q_kg || 0) - (a.q_kg || 0));
+      if (score < bestScore){ bestScore = score; best = j; }
+    });
+    usedA.add(i);
+    if (best >= 0){ usedB.add(best); out.push({ a, b: B[best], i }); }
+    else out.push({ a, b: null, i });
+  });
+  B.forEach((b, j) => { if (!usedB.has(j)) out.push({ a: null, b, i: Infinity }); });
+  return out.sort((x, y) => x.i - y.i);
 }
 function noteHtml(notes){
   return (notes || []).map(n => `<span class="mnote">${n}</span>`).join('');
@@ -440,26 +486,11 @@ function buildGroups(){
 }
 function pickKey(ref, known){ const t = tokens(ref); return t.find(x => known.has(x)) || t[0] || null; }
 function lineKey(r){ return `${Math.round(r.gram||0)}|${Math.round((r.largh_cm||0)*10)}`; }
-function matchLines(ordRows, confRows){
-  const used = new Set(); const out = [];
-  for (const o of ordRows){
-    let best = -1, bestScore = Infinity;
-    confRows.forEach((c, i) => {
-      if (used.has(i) || lineKey(c) !== lineKey(o)) return;
-      const score = Math.abs((c.q_kg||0) - (o.q_kg||0));
-      if (score < bestScore){ bestScore = score; best = i; }
-    });
-    if (best >= 0){ used.add(best); out.push({ o, c: confRows[best] }); }
-    else out.push({ o, c: null });
-  }
-  confRows.forEach((c, i) => { if (!used.has(i)) out.push({ o: null, c }); });
-  return out;
-}
 const TECH = [['diam_cm','Diametro',0],['foro_cm','Foro',1]];
-const MERGE1 = { key: lineKey, price: 'p_eur_kg', sum: ['q_kg'], same: ['diam_cm', 'foro_cm'] };
+const MERGE1 = { match: lineKey, price: 'p_eur_kg', sum: ['q_kg'], same: ['diam_cm', 'foro_cm'] };
 const LABELS1 = { diam_cm: 'diametro', foro_cm: 'foro' };
 function evaluate(ordKey, ord, confLines, meta){
-  const pairs = matchLines(mergeRows(ord.righe || [], MERGE1), mergeRows(confLines, MERGE1));
+  const pairs = pairRows(ord.righe || [], confLines, MERGE1).map(({ a, b }) => ({ o: a, c: b }));
   const flagsErr = [], flagsWarn = [];
   let sevC = false, sevT = false;
   const rows = pairs.map(({ o, c }) => {
@@ -769,21 +800,6 @@ function buildGroups2() {
 
 function lineKey2(r) { return `${Math.round(r.gram_carta || 0)}|${Math.round(r.largh_mm || 0)}`; }
 
-function matchRighe2(rFat, rConf) {
-  const used = new Set(); const out = [];
-  for (const f of rFat) {
-    let best = -1, bestScore = Infinity;
-    rConf.forEach((c, i) => {
-      if (used.has(i) || lineKey2(c) !== lineKey2(f)) return;
-      const score = Math.abs((c.q_kg || 0) - (f.q_kg || 0));
-      if (score < bestScore) { bestScore = score; best = i; }
-    });
-    if (best >= 0) { used.add(best); out.push({ f, c: rConf[best] }); }
-    else out.push({ f, c: null });
-  }
-  rConf.forEach((c, i) => { if (!used.has(i)) out.push({ f: null, c }); });
-  return out;
-}
 
 function eqStr2(a, b) {
   if (a == null || b == null) return null;
@@ -791,9 +807,9 @@ function eqStr2(a, b) {
   return n(a) === n(b);
 }
 function eqNum2(a, b, tol = 1e-6) { if (a == null || b == null) return null; return Math.abs(Number(a) - Number(b)) <= tol; }
-const MERGE2 = { key: r => lineKey2(r) + '|' + Math.round(r.gram_pe || 0), price: 'prezzo_eur_ton',
-  sum: ['q_kg', 'importo_eur'], same: ['diam_mm', 'foro_mm', 'cod_nomenclatura_riga'] };
-const LABELS2 = { diam_mm: 'diametro', foro_mm: 'foro', cod_nomenclatura_riga: 'codice nomenclatura' };
+const MERGE2 = { match: lineKey2, price: 'prezzo_eur_ton',
+  sum: ['q_kg', 'importo_eur'], same: ['gram_pe', 'diam_mm', 'foro_mm', 'cod_nomenclatura_riga'] };
+const LABELS2 = { gram_pe: 'grammatura PE', diam_mm: 'diametro', foro_mm: 'foro', cod_nomenclatura_riga: 'codice nomenclatura' };
 
 function evaluate2(key, fat, conf) {
   const flagsErr = [], flagsWarn = [];
@@ -815,7 +831,7 @@ function evaluate2(key, fat, conf) {
       sevC = true; flagsErr.push(`Cod. nomenclatura diverso — Fattura: "${fat.cod_nomenclatura}" · Conferma: "${conf.cod_nomenclatura}"`);
     }
   }
-  const pairs = matchRighe2(mergeRows(fat.righe || [], MERGE2), mergeRows(conf ? (conf.righe || []) : [], MERGE2));
+  const pairs = pairRows(fat.righe || [], conf ? (conf.righe || []) : [], MERGE2).map(({ a, b }) => ({ f: a, c: b }));
   const rows = pairs.map(({ f, c }) => {
     const name = f?.desc || c?.desc || '—';
     const gramStr = `${f?.gram_carta ?? c?.gram_carta ?? '?'}${(f?.gram_pe || c?.gram_pe) ? '+' + (f?.gram_pe ?? c?.gram_pe) + ' PE' : ''} g/m²`;
