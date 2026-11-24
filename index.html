@@ -267,6 +267,55 @@ function fmtDelta(p){
   return `<span class="delta bad">${p>0?'+':''}${p.toLocaleString('it-IT',{maximumFractionDigits:1})}%</span>`;
 }
 const near = (a, b) => (a == null || b == null) ? false : Math.abs(a - b) <= DIMEPS + 1e-9;
+const round3 = v => Math.round(v * 1000) / 1000;
+// Unisce le righe con lo stesso articolo/specifica prima del confronto,
+// es. 5.000 kg in ordine contro 2.000 + 3.000 kg in conferma/fattura.
+// opts: key (funzione chiave), price (campo prezzo), sum (campi da sommare), same (campi che dovrebbero coincidere)
+function mergeRows(rows, opts){
+  const groups = new Map();
+  for (const r of rows){
+    const k = opts.key(r);
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(r);
+  }
+  return [...groups.values()].map(g => {
+    if (g.length === 1) return g[0];
+    const m = { ...g[0], _parts: g.map(r => r.q_kg), _priceMix: null, _conflicts: [] };
+    for (const f of opts.sum){
+      const vals = g.map(r => r[f]).filter(v => v != null);
+      m[f] = vals.length ? round3(vals.reduce((a, b) => a + b, 0)) : null;
+    }
+    const pr = g.filter(r => r[opts.price] != null);
+    if (pr.length){
+      const p0 = pr[0][opts.price];
+      if (pr.every(r => Math.abs(r[opts.price] - p0) < 1e-9)) m[opts.price] = p0;
+      else {
+        const kg = pr.reduce((s, r) => s + (r.q_kg || 0), 0);
+        m[opts.price] = kg ? round3(pr.reduce((s, r) => s + r[opts.price] * (r.q_kg || 0), 0) / kg) : p0;
+        m._priceMix = pr.map(r => r[opts.price]);
+      }
+    }
+    for (const f of opts.same){
+      const vals = [...new Set(g.map(r => r[f]).filter(v => v != null && v !== ''))];
+      m[f] = vals.length ? vals[0] : null;
+      if (vals.length > 1) m._conflicts.push(f);
+    }
+    return m;
+  });
+}
+function partsNote(r, who){
+  if (!r?._parts) return '';
+  return `${who}: ${r._parts.length} righe unite (${r._parts.map(fmtNum0).join(' + ')} kg)`;
+}
+function mergeFlags(r, who, name, priceLabel, fmtPrice, labels, flagsWarn){
+  if (!r?._parts) return false;
+  let warn = false;
+  if (r._priceMix){ warn = true;
+    flagsWarn.push(`${who} ${name}: righe unite con prezzi diversi (${r._priceMix.map(fmtPrice).join(' / ')} ${priceLabel}), confrontato il prezzo medio ponderato`); }
+  for (const f of r._conflicts){ warn = true;
+    flagsWarn.push(`${who} ${name}: righe unite con ${labels[f] || f} diverso, verificare`); }
+  return warn;
+}
 function buildGroups(){
   const orders = new Map(), confLinesByOrder = new Map(), confMeta = new Map(), orphanConfLines = [];
   for (const f of files){
@@ -317,14 +366,19 @@ function matchLines(ordRows, confRows){
   return out;
 }
 const TECH = [['diam_cm','Diametro',0],['foro_cm','Foro',1]];
+const MERGE1 = { key: lineKey, price: 'p_eur_kg', sum: ['q_kg'], same: ['diam_cm', 'foro_cm'] };
+const LABELS1 = { diam_cm: 'diametro', foro_cm: 'foro' };
 function evaluate(ordKey, ord, confLines, meta){
-  const pairs = matchLines(ord.righe || [], confLines);
+  const pairs = matchLines(mergeRows(ord.righe || [], MERGE1), mergeRows(confLines, MERGE1));
   const flagsErr = [], flagsWarn = [];
   let sevC = false, sevT = false;
   const rows = pairs.map(({ o, c }) => {
     const name = (o?.desc || c?.desc || '');
-    const sub = `${o?.gram ?? c?.gram ?? '?'} g · H ${o?.largh_cm ?? c?.largh_cm ?? '?'} cm`;
+    const notes = [partsNote(o, 'Ordine'), partsNote(c, 'Conferma')].filter(Boolean);
+    const sub = `${o?.gram ?? c?.gram ?? '?'} g · H ${o?.largh_cm ?? c?.largh_cm ?? '?'} cm` + (notes.length ? ' · ' + notes.join(' · ') : '');
     const cells = {}; let rErr = false, rWarn = false;
+    if (mergeFlags(o, 'Ordine', name, '€/kg', v => fmtN(v, 3), LABELS1, flagsWarn)) rWarn = true;
+    if (mergeFlags(c, 'Conferma', name, '€/kg', v => fmtN(v, 3), LABELS1, flagsWarn)) rWarn = true;
     const dq = pct(o?.q_kg, c?.q_kg), dp = pct(o?.p_eur_kg, c?.p_eur_kg);
     if (!o){ rErr = true; flagsErr.push(`Riga presente solo in conferma: ${name} (${sub})`); }
     else if (!c){ rErr = true; flagsErr.push(`Riga dell'ordine non confermata: ${name} (${sub})`); }
@@ -607,8 +661,17 @@ function buildGroups2() {
       d._file = f.file.name;
       const k = normOrd2(d.n_ordine_serchio);
       if (!k) continue;
-      if (d.tipo === 'fattura') fatture.set(k, d);
-      else if (d.tipo === 'conferma') conferme.set(k, d);
+      const target = d.tipo === 'fattura' ? fatture : d.tipo === 'conferma' ? conferme : null;
+      if (!target) continue;
+      const prev = target.get(k);
+      // Più fatture o più conferme per lo stesso ordine: le righe vengono messe insieme invece di perderne una.
+      if (prev) {
+        const merged = { ...prev, righe: [...(prev.righe || []), ...(d.righe || [])] };
+        merged.n_doc = [prev.n_doc, d.n_doc].filter(Boolean).join(' + ') || null;
+        if (prev.massa_netta_kg != null || d.massa_netta_kg != null)
+          merged.massa_netta_kg = (prev.massa_netta_kg || 0) + (d.massa_netta_kg || 0);
+        target.set(k, merged);
+      } else target.set(k, d);
     }
   }
   return { fatture, conferme };
@@ -637,7 +700,10 @@ function eqStr2(a, b) {
   const n = s => String(s).toLowerCase().trim().replace(/\s+/g, ' ');
   return n(a) === n(b);
 }
-function eqNum2(a, b) { if (a == null || b == null) return null; return Number(a) === Number(b); }
+function eqNum2(a, b, tol = 1e-6) { if (a == null || b == null) return null; return Math.abs(Number(a) - Number(b)) <= tol; }
+const MERGE2 = { key: r => lineKey2(r) + '|' + Math.round(r.gram_pe || 0), price: 'prezzo_eur_ton',
+  sum: ['q_kg', 'importo_eur'], same: ['diam_mm', 'foro_mm', 'cod_nomenclatura_riga'] };
+const LABELS2 = { diam_mm: 'diametro', foro_mm: 'foro', cod_nomenclatura_riga: 'codice nomenclatura' };
 
 function evaluate2(key, fat, conf) {
   const flagsErr = [], flagsWarn = [];
@@ -659,12 +725,16 @@ function evaluate2(key, fat, conf) {
       sevC = true; flagsErr.push(`Cod. nomenclatura diverso — Fattura: "${fat.cod_nomenclatura}" · Conferma: "${conf.cod_nomenclatura}"`);
     }
   }
-  const pairs = matchRighe2(fat.righe || [], conf ? (conf.righe || []) : []);
+  const pairs = matchRighe2(mergeRows(fat.righe || [], MERGE2), mergeRows(conf ? (conf.righe || []) : [], MERGE2));
   const rows = pairs.map(({ f, c }) => {
     const name = f?.desc || c?.desc || '—';
     const gramStr = `${f?.gram_carta ?? c?.gram_carta ?? '?'}${(f?.gram_pe || c?.gram_pe) ? '+' + (f?.gram_pe ?? c?.gram_pe) + ' PE' : ''} g/m²`;
-    const sub = `${gramStr} · H ${f?.largh_mm ?? c?.largh_mm ?? '?'} mm`;
+    const notes = [partsNote(f, 'Fattura'), partsNote(c, 'Conferma')].filter(Boolean);
+    const sub = `${gramStr} · H ${f?.largh_mm ?? c?.largh_mm ?? '?'} mm` + (notes.length ? ' · ' + notes.join(' · ') : '');
     const cells = {}; let rErr = false, rWarn = false;
+    const fP = v => v == null ? '—' : v.toLocaleString('it-IT', { maximumFractionDigits: 2 });
+    if (mergeFlags(f, 'Fattura', name, 'EUR/ton', fP, LABELS2, flagsWarn)) rWarn = true;
+    if (mergeFlags(c, 'Conferma', name, 'EUR/ton', fP, LABELS2, flagsWarn)) rWarn = true;
     if (!f) { rErr = true; flagsErr.push(`Riga presente solo in conferma: ${name}`); }
     else if (!c && conf) { rErr = true; flagsErr.push(`Riga fattura senza corrispondenza in conferma: ${name}`); }
     else if (c) {
@@ -673,8 +743,8 @@ function evaluate2(key, fat, conf) {
       if (f.largh_mm != null && c.largh_mm != null && !eqNum2(f.largh_mm, c.largh_mm)) { rErr = true; cells.largh_mm = 1; flagsErr.push(`Altezza ${name}: fat. ${f.largh_mm} mm → conf. ${c.largh_mm} mm`); }
       if (f.foro_mm != null && c.foro_mm != null && !eqNum2(f.foro_mm, c.foro_mm)) { rWarn = true; cells.foro_mm = 1; flagsWarn.push(`Foro/anima ${name}: fat. ${f.foro_mm} mm → conf. ${c.foro_mm} mm`); }
       if (f.diam_mm != null && c.diam_mm != null && !eqNum2(f.diam_mm, c.diam_mm)) { rWarn = true; cells.diam_mm = 1; flagsWarn.push(`Diametro ${name}: fat. ${f.diam_mm} mm → conf. ${c.diam_mm} mm`); }
-      if (f.q_kg != null && c.q_kg != null && !eqNum2(f.q_kg, c.q_kg)) { rErr = true; cells.q_kg = 1; flagsErr.push(`Quantità ${name}: fat. ${f.q_kg} → conf. ${c.q_kg} kg`); }
-      if (f.prezzo_eur_ton != null && c.prezzo_eur_ton != null && !eqNum2(f.prezzo_eur_ton, c.prezzo_eur_ton)) { rErr = true; cells.prezzo_eur_ton = 1; flagsErr.push(`Prezzo ${name}: fat. ${f.prezzo_eur_ton} → conf. ${c.prezzo_eur_ton} EUR/ton`); }
+      if (f.q_kg != null && c.q_kg != null && !eqNum2(f.q_kg, c.q_kg, 0.5)) { rErr = true; cells.q_kg = 1; flagsErr.push(`Quantità ${name}: fat. ${f.q_kg} → conf. ${c.q_kg} kg`); }
+      if (f.prezzo_eur_ton != null && c.prezzo_eur_ton != null && !eqNum2(f.prezzo_eur_ton, c.prezzo_eur_ton, 0.01)) { rErr = true; cells.prezzo_eur_ton = 1; flagsErr.push(`Prezzo ${name}: fat. ${f.prezzo_eur_ton} → conf. ${c.prezzo_eur_ton} EUR/ton`); }
       const cnf = f.cod_nomenclatura_riga || fat.cod_nomenclatura;
       const cnc = c.cod_nomenclatura_riga || (conf && conf.cod_nomenclatura);
       if (cnf && cnc && !eqStr2(cnf, cnc)) { rErr = true; cells.cn = 1; flagsErr.push(`Cod. nomenclatura ${name}: fat. "${cnf}" → conf. "${cnc}"`); }
