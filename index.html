@@ -142,7 +142,7 @@ button:focus-visible{outline:2px solid var(--serchio);outline-offset:2px}
 .flagsec{display:flex;flex-direction:column;gap:2px;margin-bottom:6px}
 .flagline{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;padding:3px 0}
 .flagline .dot{width:8px;height:8px;border-radius:50%;margin-top:6px;flex:none;box-shadow:0 0 0 3px rgba(0,0,0,.04)}
-.dot.err{background:var(--err)} .dot.warn{background:var(--warn-line)} .dot.ok{background:var(--ok)}
+.dot.err{background:var(--err)} .dot.warn{background:var(--warn-line)} .dot.ok{background:var(--ok)} .dot.info{background:var(--line-strong)}
 .tblwrap{overflow-x:auto;margin-top:16px;border:1px solid var(--line);border-radius:12px}
 table{width:100%;border-collapse:collapse;font-size:12.8px}
 th{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);
@@ -307,7 +307,8 @@ function renderFiles(){
     const d = document.createElement('div'); d.className = 'f';
     const stTxt = { wait:'in attesa', run:'analisi…', done:'estratto', fail:'errore' }[f.status];
     const tags = (f.docs || []).map(doc =>
-      `<span class="tag">${doc.tipo === 'ordine' ? 'Ordine' : 'Conferma'} ${tagNums(doc)}</span>`).join('');
+      doc.tipo === 'fattura' ? `<span class="tag" title="Le fatture si controllano nella scheda Fatture Fornitore">Fattura ${doc.n_doc || ''} · ignorata</span>`
+      : `<span class="tag">${doc.tipo === 'ordine' ? 'Ordine' : 'Conferma'} ${tagNums(doc)}</span>`).join('');
     const stEl = f.status === 'run' ? '<span class="spin"></span>' : `<span class="st ${f.status}">${stTxt}</span>`;
     d.innerHTML = `<span class="name">${f.file.name}</span>${tags}${stEl}
       <button class="rm" title="Rimuovi" ${f.status==='run'?'disabled':''}>✕</button>`;
@@ -382,17 +383,21 @@ function mergeGroup(g, opts){
   return m;
 }
 const TOLQ = 0.5; // kg
-// Cerca il gruppo più piccolo (almeno 2 righe) la cui somma dà esattamente il target.
-function findSubset(cand, target){
+// Tolleranza quantità (%): entro questa soglia una differenza è "da verificare" e non bloccante
+// (tolleranze di produzione delle cartiere, pesi reali delle bobine).
+const QTOL = 10;
+// Cerca il gruppo (almeno 2 righe) la cui somma è più vicina al target, entro la tolleranza.
+function findSubset(cand, target, tol){
   const n = Math.min(cand.length, 14);
   let best = null;
   for (let mask = 1; mask < (1 << n); mask++){
     if ((mask & (mask - 1)) === 0) continue;
     let sum = 0; const pick = [];
     for (let t = 0; t < n; t++) if (mask & (1 << t)){ sum += cand[t].r.q_kg; pick.push(cand[t]); }
-    if (Math.abs(sum - target) <= TOLQ && (!best || pick.length < best.length)) best = pick;
+    const diff = Math.abs(sum - target);
+    if (diff <= tol && (!best || diff < best.diff - 1e-9 || (Math.abs(diff - best.diff) < 1e-9 && pick.length < best.pick.length))) best = { pick, diff };
   }
-  return best;
+  return best ? best.pick : null;
 }
 // Abbina le righe dei due documenti (A = ordine/fattura, B = conferma).
 // 1) stessa specifica e stessa quantità: abbinamento diretto, nessuna unione;
@@ -409,9 +414,10 @@ function pairRows(A, B, opts){
   const split = (X, Y, usedX, usedY, xIsA) => {
     X.forEach((x, i) => {
       if (usedX.has(i) || x.q_kg == null) return;
+      const tol = Math.max(TOLQ, x.q_kg * QTOL / 100);
       const cand = Y.map((r, j) => ({ r, j }))
-        .filter(({ r, j }) => !usedY.has(j) && k(r) === k(x) && r.q_kg != null && r.q_kg < x.q_kg + TOLQ);
-      const sub = findSubset(cand, x.q_kg);
+        .filter(({ r, j }) => !usedY.has(j) && k(r) === k(x) && r.q_kg != null && r.q_kg < x.q_kg + tol);
+      const sub = findSubset(cand, x.q_kg, tol);
       if (!sub) return;
       usedX.add(i); sub.forEach(({ j }) => usedY.add(j));
       const m = mergeGroup(sub.map(s => s.r), opts);
@@ -464,7 +470,7 @@ function pairsFromGroups(A, B, gruppi, opts){
     out.push({
       a: ia.length ? mergeGroup(ia.map(i => A[i]), opts) : null,
       b: ib.length ? mergeGroup(ib.map(j => B[j]), opts) : null,
-      i: ia.length ? Math.min(...ia) : Infinity, motivo: g.motivo || null,
+      i: ia.length ? Math.min(...ia) : Infinity, motivo: g.motivo || null, differenze: g.differenze || null,
     });
   }
   A.forEach((a, i) => { if (!usedA.has(i)) out.push({ a, b: null, i }); });
@@ -507,7 +513,7 @@ function buildGroups(){
   for (const f of files){
     if (f.status !== 'done' || !f.docs) continue;
     for (const d of f.docs){
-      if (d.tipo === 'ordine') continue;
+      if (d.tipo !== 'conferma') continue;
       const headerKey = pickKey(d.n_ordine_cliente, knownOrders);
       for (const r of (d.righe || [])){
         const k = pickKey(r.n_ordine_riga, knownOrders) || headerKey;
@@ -553,11 +559,11 @@ async function prepareMatches1(){
 function evaluate(ordKey, ord, confLines, meta){
   const m = matches1.get(ordKey);
   const pairs = (m ? pairsFromGroups(ord.righe || [], confLines, m.gruppi, MERGE1) : pairRows(ord.righe || [], confLines, MERGE1))
-    .map(({ a, b }) => ({ o: a, c: b }));
+    .map(({ a, b, differenze }) => ({ o: a, c: b, diff: differenze }));
   const flagsErr = [], flagsWarn = [];
   if (matches1.size && !m) flagsWarn.push(AI_OFF);
   let sevC = false, sevT = false;
-  const rows = pairs.map(({ o, c }) => {
+  const rows = pairs.map(({ o, c, diff }) => {
     const name = (o?.desc || c?.desc || '');
     const notes = [partsNote(o, 'Ordine'), partsNote(c, 'Conferma')].filter(Boolean);
     const sub = `${o?.gram ?? c?.gram ?? '?'} g · H ${o?.largh_cm ?? c?.largh_cm ?? '?'} cm`;
@@ -568,8 +574,11 @@ function evaluate(ordKey, ord, confLines, meta){
     if (!o){ rErr = true; flagsErr.push(`Riga presente solo in conferma: ${name} (${sub})`); }
     else if (!c){ rErr = true; flagsErr.push(`Riga dell'ordine non confermata: ${name} (${sub})`); }
     else {
-      if (dq != null && Math.abs(dq) > EPS){ rErr = true; cells.q = 1;
-        flagsErr.push(`Quantità ${name}: ${fmtNum0(o.q_kg)} → ${fmtNum0(c.q_kg)} kg (${dq>0?'+':''}${dq.toFixed(1)}%)`); }
+      if (dq != null && Math.abs(dq) > QTOL){ rErr = true; cells.q = 1;
+        flagsErr.push(`Quantità ${name}: ${fmtNum0(o.q_kg)} → ${fmtNum0(c.q_kg)} kg (${dq>0?'+':''}${dq.toFixed(1)}%, oltre la tolleranza del ${QTOL}%)`); }
+      else if (dq != null && Math.abs(dq) > EPS){ rWarn = true; cells.qw = 1;
+        flagsWarn.push(`Quantità ${name}: ${fmtNum0(o.q_kg)} → ${fmtNum0(c.q_kg)} kg (${dq>0?'+':''}${dq.toFixed(1)}%, entro la tolleranza del ${QTOL}%)`); }
+      if (diff){ rWarn = true; flagsWarn.push(`Prodotto ${name}: ${diff}`); }
       if (dp != null && Math.abs(dp) > EPS){ rErr = true; cells.p = 1;
         flagsErr.push(`Prezzo netto ${name}: ${fmtN(o.p_eur_kg,3)} → ${fmtN(c.p_eur_kg,3)} €/kg (${dp>0?'+':''}${dp.toFixed(1)}%)`); }
       if (c.sconto_pct){ flagsWarn.push(`Sconto stock ${name}: ${fmtN(c.sconto_pct,0)}% (prezzo netto verificato)`); }
@@ -595,7 +604,7 @@ function evaluate(ordKey, ord, confLines, meta){
   const dConf = [...meta.destinazione][0] || '';
   if (dOrd || dConf){
     const v = textVerdict(m, 'destinazione');
-    const ok = v ? v.equivalenti : Boolean(normDest(dOrd) && normDest(dConf) && normDest(dOrd) === normDest(dConf));
+    const ok = v ? v.equivalenti : sameAddress(dOrd, dConf);
     dest = { ok, dOrd: dOrd || '—', dConf: dConf || '—' };
     if (!ok && dOrd && dConf){ sevC = true; flagsErr.push(`Destinazione merce diversa tra ordine e conferma` + (v && v.nota ? `: ${v.nota}` : '')); }
   }
@@ -604,6 +613,17 @@ function evaluate(ordKey, ord, confLines, meta){
   return { ord, rows, flagsErr, flagsWarn, sevC, sevT, totO, totC, dt, dest, meta };
 }
 function normDest(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'').replace(/srl|spa|snc|ditta|sas/g,'') || null; }
+// Confronto di riserva (senza AI): stesso indirizzo se quasi tutte le parole significative del più corto compaiono nell'altro.
+function sameAddress(a, b){
+  const STOP = new Set(['srl','spa','snc','sas','ditta','via','viale','loc','localita','presso','c','o','co','n','nr','it','i','di','del','della','the']);
+  const words = t => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ')
+    .split(' ').filter(w => w.length > 1 && !STOP.has(w));
+  const A = new Set(words(a)), B = new Set(words(b));
+  if (!A.size || !B.size) return false;
+  const [small, big] = A.size <= B.size ? [A, B] : [B, A];
+  let hit = 0; small.forEach(w => { if (big.has(w)) hit++; });
+  return hit / small.size >= 0.6;
+}
 $('run').addEventListener('click', async () => {
   $('run').disabled = true;
   for (const entry of files){
@@ -638,6 +658,8 @@ function renderResults(){
       box.appendChild(card(key, ev));
     } else { box.appendChild(orphanCard(key, ord, lines, meta)); }
   }
+  const ignored1 = files.filter(f => (f.docs || []).some(d => d.tipo === 'fattura')).map(f => f.file.name);
+  if (ignored1.length) box.appendChild(ignoredCard(ignored1, 'fatture', 'Fatture Fornitore'));
   for (const e of files.filter(f => f.status === 'fail')){
     const d = document.createElement('div');
     d.className = 'supcard s-err open';
@@ -667,8 +689,8 @@ function card(key, ev){
   const rowsHtml = ev.rows.map(l => `
     <tr class="${l.rErr?'r-err':l.rWarn?'r-warn':''}">
       <td class="art"><span class="artname">${l.name||'—'}</span><br><span class="artsub">${l.sub}</span>${noteHtml(l.notes)}</td>
-      <td class="num ${l.cells.q?'cellbad':''}">${fmtNum0(l.o?.q_kg)}</td>
-      <td class="num ${l.cells.q?'cellbad':''}">${fmtNum0(l.c?.q_kg)}</td>
+      <td class="num ${l.cells.q?'cellbad':l.cells.qw?'cellwarn':''}">${fmtNum0(l.o?.q_kg)}</td>
+      <td class="num ${l.cells.q?'cellbad':l.cells.qw?'cellwarn':''}">${fmtNum0(l.c?.q_kg)}</td>
       <td class="num">${fmtDelta(l.dq)}</td>
       <td class="num ${l.cells.p?'cellbad':''}">${fmtN(l.o?.p_eur_kg,3)}</td>
       <td class="num ${l.cells.p?'cellbad':''}">${fmtN(l.c?.p_eur_kg,3)}</td>
@@ -718,6 +740,15 @@ function card(key, ev){
       ${payHtml}
     </div>`;
   d.querySelector('.suphead').onclick = () => d.classList.toggle('open');
+  return d;
+}
+function ignoredCard(names, what, tab){
+  const d = document.createElement('div');
+  d.className = 'supcard open';
+  d.innerHTML = `<div class="suphead"><span class="chev">▶</span><h3>Documenti non usati in questo controllo</h3>
+      <span class="badge" style="background:var(--paper-2);color:var(--ink-soft)">ignorati</span></div>
+    <div class="supbody" style="display:block"><div class="flagline"><span class="dot info"></span>
+      <span>${names.join(', ')}: contiene ${what}, che si controllano nella scheda <b>${tab}</b>. Non sono stati considerati qui.</span></div></div>`;
   return d;
 }
 function orphanCard(key, ord, lines, meta){
@@ -818,7 +849,9 @@ function renderFiles2() {
   files2.forEach((f, i) => {
     const d = document.createElement('div'); d.className = 'f';
     const stTxt = { wait: 'in attesa', run: 'analisi…', done: 'estratto', fail: 'errore' }[f.status];
-    const tags = (f.docs || []).map(doc => `<span class="tag">${doc.tipo === 'fattura' ? 'Fattura' : 'Conferma'} ${doc.n_doc || ''}</span>`).join('');
+    const tags = (f.docs || []).map(doc => doc.tipo === 'ordine'
+      ? `<span class="tag" title="Gli ordini si controllano nella scheda Conferme d'Ordine">Ordine ${doc.n_ordine_serchio || ''} · ignorato</span>`
+      : `<span class="tag">${doc.tipo === 'fattura' ? 'Fattura' : 'Conferma'} ${doc.n_doc || ''}</span>`).join('');
     const stEl = f.status === 'run' ? '<span class="spin"></span>' : `<span class="st ${f.status}">${stTxt}</span>`;
     d.innerHTML = `<span class="name">${f.file.name}</span>${tags}${stEl}<button class="rm" title="Rimuovi" ${f.status === 'run' ? 'disabled' : ''}>×</button>`;
     const rm = d.querySelector('.rm'); if (rm) rm.onclick = () => { files2.splice(i, 1); renderFiles2(); };
@@ -909,7 +942,7 @@ function evaluate2(key, fat, conf) {
   let destOk = null;
   if (fat.indirizzo_consegna && conf && conf.indirizzo_consegna) {
     const v = textVerdict(m, 'indirizzo_consegna');
-    destOk = v ? v.equivalenti : eqStr2(fat.indirizzo_consegna, conf.indirizzo_consegna);
+    destOk = v ? v.equivalenti : sameAddress(fat.indirizzo_consegna, conf.indirizzo_consegna);
     if (!destOk) { sevC = true; flagsErr.push(`Indirizzo consegna diverso — Fattura: "${fat.indirizzo_consegna}" · Conferma: "${conf.indirizzo_consegna}"` + (v && v.nota ? ` (${v.nota})` : '')); }
   }
   let pagOk = null;
@@ -926,8 +959,9 @@ function evaluate2(key, fat, conf) {
     }
   }
   const A2 = fat.righe || [], B2 = conf ? (conf.righe || []) : [];
-  const pairs = (m ? pairsFromGroups(A2, B2, m.gruppi, MERGE2) : pairRows(A2, B2, MERGE2)).map(({ a, b }) => ({ f: a, c: b }));
-  const rows = pairs.map(({ f, c }) => {
+  const flagsInfo = [];
+  const pairs = (m ? pairsFromGroups(A2, B2, m.gruppi, MERGE2) : pairRows(A2, B2, MERGE2)).map(({ a, b, differenze }) => ({ f: a, c: b, diff: differenze }));
+  const rows = pairs.map(({ f, c, diff }) => {
     const name = f?.desc || c?.desc || '—';
     const gramStr = `${f?.gram_carta ?? c?.gram_carta ?? '?'}${(f?.gram_pe || c?.gram_pe) ? '+' + (f?.gram_pe ?? c?.gram_pe) + ' PE' : ''} g/m²`;
     const notes = [partsNote(f, 'Fattura'), partsNote(c, 'Conferma')].filter(Boolean);
@@ -936,7 +970,7 @@ function evaluate2(key, fat, conf) {
     const fP = v => v == null ? '—' : v.toLocaleString('it-IT', { maximumFractionDigits: 2 });
     if (mergeFlags(f, 'Fattura', name, 'EUR/ton', fP, LABELS2, flagsWarn)) rWarn = true;
     if (mergeFlags(c, 'Conferma', name, 'EUR/ton', fP, LABELS2, flagsWarn)) rWarn = true;
-    if (!f) { rErr = true; flagsErr.push(`Riga presente solo in conferma: ${name}`); }
+    if (!f) { notes.push('Non presente in questa fattura'); flagsInfo.push(`Riga della conferma non presente in questa fattura (consegna o fatturazione parziale): ${name} · ${fmtNum0(c.q_kg)} kg`); }
     else if (!c && conf) { rErr = true; flagsErr.push(`Riga fattura senza corrispondenza in conferma: ${name}`); }
     else if (c) {
       if (f.gram_carta != null && c.gram_carta != null && !eqNum2(f.gram_carta, c.gram_carta)) { rErr = true; cells.gram_carta = 1; flagsErr.push(`Grammatura carta ${name}: fat. ${f.gram_carta} → conf. ${c.gram_carta} g/m²`); }
@@ -944,7 +978,12 @@ function evaluate2(key, fat, conf) {
       if (f.largh_mm != null && c.largh_mm != null && !eqNum2(f.largh_mm, c.largh_mm)) { rErr = true; cells.largh_mm = 1; flagsErr.push(`Altezza ${name}: fat. ${f.largh_mm} mm → conf. ${c.largh_mm} mm`); }
       if (f.foro_mm != null && c.foro_mm != null && !eqNum2(f.foro_mm, c.foro_mm)) { rWarn = true; cells.foro_mm = 1; flagsWarn.push(`Foro/anima ${name}: fat. ${f.foro_mm} mm → conf. ${c.foro_mm} mm`); }
       if (f.diam_mm != null && c.diam_mm != null && !eqNum2(f.diam_mm, c.diam_mm)) { rWarn = true; cells.diam_mm = 1; flagsWarn.push(`Diametro ${name}: fat. ${f.diam_mm} mm → conf. ${c.diam_mm} mm`); }
-      if (f.q_kg != null && c.q_kg != null && !eqNum2(f.q_kg, c.q_kg, 0.5)) { rErr = true; cells.q_kg = 1; flagsErr.push(`Quantità ${name}: fat. ${f.q_kg} → conf. ${c.q_kg} kg`); }
+      const dq2 = pct(c.q_kg, f.q_kg);
+      if (f.q_kg != null && c.q_kg != null && !eqNum2(f.q_kg, c.q_kg, 0.5)) {
+        if (dq2 != null && Math.abs(dq2) <= QTOL) { rWarn = true; cells.q_kg_w = 1; flagsWarn.push(`Quantità ${name}: fat. ${fmtNum0(f.q_kg)} → conf. ${fmtNum0(c.q_kg)} kg (${dq2>0?'+':''}${dq2.toFixed(1)}%, entro la tolleranza del ${QTOL}%)`); }
+        else { rErr = true; cells.q_kg = 1; flagsErr.push(`Quantità ${name}: fat. ${fmtNum0(f.q_kg)} → conf. ${fmtNum0(c.q_kg)} kg` + (dq2 != null ? ` (${dq2>0?'+':''}${dq2.toFixed(1)}%, oltre la tolleranza del ${QTOL}%)` : '')); }
+      }
+      if (diff) { rWarn = true; flagsWarn.push(`Prodotto ${name}: ${diff}`); }
       if (f.prezzo_eur_ton != null && c.prezzo_eur_ton != null && !eqNum2(f.prezzo_eur_ton, c.prezzo_eur_ton, 0.01)) { rErr = true; cells.prezzo_eur_ton = 1; flagsErr.push(`Prezzo ${name}: fat. ${f.prezzo_eur_ton} → conf. ${c.prezzo_eur_ton} EUR/ton`); }
       const cnf = f.cod_nomenclatura_riga || fat.cod_nomenclatura;
       const cnc = c.cod_nomenclatura_riga || (conf && conf.cod_nomenclatura);
@@ -953,7 +992,7 @@ function evaluate2(key, fat, conf) {
     if (rErr) sevC = true; if (rWarn) sevT = true;
     return { f, c, name, sub, notes, cells, rErr, rWarn };
   });
-  return { fat, conf, rows, flagsErr, flagsWarn, sevC, sevT, pivaOk, destOk, pagOk };
+  return { fat, conf, rows, flagsErr, flagsWarn, flagsInfo, sevC, sevT, pivaOk, destOk, pagOk };
 }
 
 $('run2').addEventListener('click', async () => {
@@ -991,6 +1030,8 @@ function renderResults2() {
     if (ev.sevC) err++; else if (ev.sevT) warn++; else ok++;
     box.appendChild(card2(key, ev, false));
   }
+  const ignored2 = files2.filter(f => (f.docs || []).some(d => d.tipo === 'ordine')).map(f => f.file.name);
+  if (ignored2.length) box.appendChild(ignoredCard(ignored2, 'ordini Serchio', "Conferme d'Ordine"));
   for (const e of files2.filter(f => f.status === 'fail')) {
     const d = document.createElement('div'); d.className = 'supcard s-err open';
     d.innerHTML = `<div class="suphead"><span class="chev">&#9658;</span><h3>${e.file.name}</h3><span class="badge err">errore</span></div><div class="supbody" style="display:block"><div class="errmsg">Analisi non riuscita: ${e.error}. Rilancia per riprovare.</div></div>`;
@@ -1003,7 +1044,7 @@ function renderResults2() {
 }
 
 function card2(key, ev, missingConf) {
-  const { fat, conf, rows, flagsErr, flagsWarn, sevC, sevT, pivaOk, destOk } = ev;
+  const { fat, conf, rows, flagsErr, flagsWarn, flagsInfo, sevC, sevT, pivaOk, destOk } = ev;
   const sev = missingConf ? 'warn' : sevC ? 'err' : sevT ? 'warn' : 'ok';
   const d = document.createElement('div');
   d.className = `supcard s-${sev}` + (sev !== 'ok' ? ' open' : '');
@@ -1021,8 +1062,8 @@ function card2(key, ev, missingConf) {
       <td class="num ${cells.largh_mm ? 'cellbad' : ''}">${f?.largh_mm ?? '—'}</td>
       <td class="num ${cells.largh_mm ? 'cellbad' : ''}">${c?.largh_mm ?? '—'}</td>
       <td class="num ${cells.foro_mm ? 'cellwarn' : ''}">${f?.foro_mm ?? '—'}${cells.foro_mm ? ` → ${c?.foro_mm ?? '—'}` : ''}</td>
-      <td class="num ${cells.q_kg ? 'cellbad' : ''}">${f?.q_kg != null ? f.q_kg.toLocaleString('it-IT', { maximumFractionDigits: 0 }) : '—'}</td>
-      <td class="num ${cells.q_kg ? 'cellbad' : ''}">${c?.q_kg != null ? c.q_kg.toLocaleString('it-IT', { maximumFractionDigits: 0 }) : '—'}</td>
+      <td class="num ${cells.q_kg ? 'cellbad' : cells.q_kg_w ? 'cellwarn' : ''}">${f?.q_kg != null ? f.q_kg.toLocaleString('it-IT', { maximumFractionDigits: 0 }) : '—'}</td>
+      <td class="num ${cells.q_kg ? 'cellbad' : cells.q_kg_w ? 'cellwarn' : ''}">${c?.q_kg != null ? c.q_kg.toLocaleString('it-IT', { maximumFractionDigits: 0 }) : '—'}</td>
       <td class="num ${cells.prezzo_eur_ton ? 'cellbad' : ''}">${fN(f?.prezzo_eur_ton)}</td>
       <td class="num ${cells.prezzo_eur_ton ? 'cellbad' : ''}">${c != null ? fN(c?.prezzo_eur_ton) : '—'}</td>
       <td class="${cells.cn ? 'cellbad' : ''}">${f?.cod_nomenclatura_riga || fat.cod_nomenclatura || '—'}</td>
@@ -1031,7 +1072,8 @@ function card2(key, ev, missingConf) {
   const flags = [];
   flagsErr.forEach(t => flags.push(`<div class="flagline"><span class="dot err"></span><span>${t}</span></div>`));
   flagsWarn.forEach(t => flags.push(`<div class="flagline"><span class="dot warn"></span><span>${t}</span></div>`));
-  if (!flags.length && !missingConf) flags.push('<div class="flagline"><span class="dot ok"></span><span>Fattura e conferma combaciano su tutti i campi controllati.</span></div>');
+  if (!flags.length && !missingConf) flags.push('<div class="flagline"><span class="dot ok"></span><span>Le righe fatturate combaciano con la conferma su tutti i campi controllati.</span></div>');
+  (flagsInfo || []).forEach(t => flags.push(`<div class="flagline"><span class="dot info"></span><span>${t}</span></div>`));
   if (missingConf) flags.push("<div class='flagline'><span class='dot warn'></span><span>Conferma d'ordine non trovata. Carica la conferma e rilancia.</span></div>");
   const notebox = `<div class="notebox">
     <div class="row"><b>P.IVA Serchio</b> — ${fat.piva_buyer || 'n.d.'} ${pivaOk ? '✓' : '<b style="color:var(--err)">⚠ errata</b>'}</div>

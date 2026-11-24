@@ -67,7 +67,7 @@ const SCHEMA1 = obj({
   documenti: {
     type: 'array',
     items: obj({
-      tipo: { type: 'string', enum: ['ordine', 'conferma'] },
+      tipo: { type: 'string', enum: ['ordine', 'conferma', 'fattura'] },
       fornitore: str,
       n_ordine_cliente: str,
       n_doc: str,
@@ -99,7 +99,7 @@ const SCHEMA2 = obj({
   documenti: {
     type: 'array',
     items: obj({
-      tipo: { type: 'string', enum: ['fattura', 'conferma'] },
+      tipo: { type: 'string', enum: ['fattura', 'conferma', 'ordine'] },
       fornitore: str,
       n_doc: str,
       n_ordine_serchio: str,
@@ -132,7 +132,8 @@ const SCHEMA2 = obj({
 const PROMPT1 = `Questo PDF contiene uno o più documenti commerciali del settore carta. I tipi possibili sono:
 - "ordine": ordine d'acquisto emesso da Serchio Distribuzione S.r.l. (intestazione rossa SERCHIO, campo TIPO DOCUMENTO: ORDINE A FORNITORE)
 - "conferma": conferma d'ordine del fornitore (order confirmation, order acknowledgement, sales confirmation, conferma di vendita)
-Il PDF può contenere un solo documento oppure entrambi.
+- "fattura": fattura del fornitore (invoice). Non serve a questo controllo: classificala come "fattura" ed estrai comunque fornitore, n_doc e n_ordine_cliente.
+Il PDF può contenere un solo documento oppure più documenti.
 
 Per OGNI documento estrai i dati. NORMALIZZA SEMPRE:
 - quantità in KG (TO/tonnellate x1000)
@@ -152,6 +153,7 @@ const PROMPT2 = `Questo PDF contiene uno o più documenti commerciali del settor
 TIPO DOCUMENTO:
 - "fattura": invoice emessa dal fornitore verso Serchio Distribuzione
 - "conferma": conferma d'ordine del fornitore
+- "ordine": ordine d'acquisto emesso da Serchio Distribuzione (intestazione SERCHIO, TIPO DOCUMENTO: ORDINE A FORNITORE). Non serve a questo controllo: classificalo come "ordine" ed estrai comunque fornitore, n_doc e n_ordine_serchio.
 
 NUMERO ORDINE SERCHIO (n_ordine_serchio): cerca "Your Order", "Customer Order No", "Buyer's Order No", "VS. ORDINE", "PO/Reference No", "Customer Ref", "Order no", "Comanda". Estrai SOLO il numero (es. "177", "36", "127").
 
@@ -272,6 +274,7 @@ const MATCH_SCHEMA = obj({
       a: { type: 'array', items: { type: 'integer' } },
       b: { type: 'array', items: { type: 'integer' } },
       motivo: { type: 'string' },
+      differenze: { type: 'string' },
     }),
   },
   testi: {
@@ -286,9 +289,12 @@ COMPITO 1 — Abbina le righe di A con le righe di B che si riferiscono allo STE
 - le descrizioni possono essere scritte in modo diverso (lingua, abbreviazioni, codici articolo, nome commerciale);
 - un dato può mancare in uno dei due documenti, o essere scritto in un'altra unità (mm/cm, kg/t);
 - un prodotto può essere SPEZZATO in più righe nell'altro documento (es. 5.000 kg in A = 2.000 + 3.000 kg in B): in quel caso metti tutte quelle righe nello stesso gruppo;
-- abbina in base a tipo di carta, grammatura, formato/altezza, diametro/foro, prezzo e quantità; la quantità può anche essere diversa (sarà poi segnalata), ma il prodotto deve essere lo stesso;
+- abbina in base a tipo di carta, grammatura, formato/altezza, diametro/foro, prezzo e quantità; la quantità può essere diversa (tolleranze di produzione delle cartiere, consegne parziali): conta che il prodotto sia lo stesso;
+- se nel documento sono indicati riferimenti alle righe dell'altro documento (es. "Item: 000007", "Customer material no."), usali;
+- una riga di B senza corrispondenza in A è normale quando B è una conferma e A una fattura (consegna/fatturazione parziale): lasciala fuori;
 - NON abbinare prodotti davvero diversi; una riga che non ha corrispondenza non va messa in nessun gruppo;
 - ogni indice può comparire al massimo in un gruppo. "motivo": breve spiegazione in italiano.
+- "differenze": SOLO differenze sostanziali di prodotto tra le righe abbinate (qualità o tipo di carta diverso, finitura diversa, grammatura o formato diversi) spiegate in breve in italiano; NON segnalare differenze di scrittura, lingua, unità di misura, quantità o prezzo (quelle sono controllate a parte). Se non ce ne sono: "".
 
 COMPITO 2 — Per ogni coppia di testi in "testi_da_confrontare", indica se hanno lo STESSO SIGNIFICATO (es. "30 days net" e "30 gg data fattura" sì; due indirizzi dello stesso stabilimento scritti in modo diverso sì; città o condizioni diverse no). "nota": breve spiegazione in italiano se non sono equivalenti, altrimenti "".
 
