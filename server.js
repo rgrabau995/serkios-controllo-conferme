@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const crypto = require('crypto');
 const Anthropic = require('@anthropic-ai/sdk');
 
@@ -223,6 +224,9 @@ function route(prompt, schema) {
 app.post('/api/analizza', route(PROMPT1, SCHEMA1));
 // Tool 2 — Fatture Fornitore
 app.post('/api/analizza2', route(PROMPT2, SCHEMA2));
+
+// Pagina del tool: servita direttamente da Railway (non serve più Vercel)
+app.get('/', (_, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 app.get('/health', (_, res) => res.json({ status: 'ok', tool: 'suite-controlli' }));
 
