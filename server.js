@@ -171,8 +171,8 @@ TIPO DOCUMENTO (tipo):
 TESTATA:
 - n_doc: numero del documento (ordine: NUMERO ORDINE; conferma: il numero d'ordine/conferma del fornitore, es. "Our Order No."; fattura: numero fattura, es. "Document No.").
 - data: data del documento.
-- n_ordine_serchio: il numero d'ordine di Serchio. Nell'ordine Serchio è NUMERO ORDINE; negli altri documenti: Your Order No., Customer Order No., Buyer's Order No., Customer PO, Vostro ordine, VS. ORDINE, PO/Reference No., Customer Ref. Solo il numero, senza data (es. "512/10.01.2026" → "512"). Se il documento ne cita più d'uno, metti il primo e indica quello di ogni riga in n_ordine_serchio_riga.
-- n_conferma_fornitore: SOLO per la fattura: numero della conferma/ordine del fornitore citato ("Our Order No.", "Sales Order", "Auftragsnummer"). Per la conferma ripeti il suo n_doc. Per l'ordine "".
+- n_ordine_serchio: il numero d'ordine di Serchio. Nell'ordine Serchio è NUMERO ORDINE; negli altri documenti: Your Order No., Customer Order No., Buyer's Order No., Customer PO, Vostro ordine, VS. ORDINE, PO/Reference No., Customer Ref. Solo il numero d'ordine Serchio, senza data né codici aggiunti dal fornitore (es. "512/10.01.2026" → "512"; "512-60011" → "512"). Se il documento ne cita più d'uno, riportali tutti separati da "/" (es. "Customer Ref.: 512-60011/518-60020" → "512/518") e indica quello di ogni riga in n_ordine_serchio_riga.
+- n_conferma_fornitore: SOLO per la fattura: numero della conferma/ordine del fornitore citato ("Our Order No.", "Order Nº", "Sales Order", "Auftragsnummer"); se sono più d'uno, tutti separati da "/" (es. "PT0001111/PT0002222"). Per la conferma ripeti il suo n_doc. Per l'ordine "".
 - piva_buyer: partita IVA dell'acquirente (Serchio) esattamente come scritta (attesa IT05147461007).
 - indirizzo_consegna: Ship-to / Consignee / Delivery address / Destinatario della merce: nome + via + città.
 - pagamento: testo esatto delle condizioni di pagamento.
@@ -180,7 +180,8 @@ TESTATA:
 - cod_nomenclatura: codice doganale (Custom Tariff Number, CN, HS, Codice Intra) se unico per il documento.
 - totale_merce: totale imponibile della merce (Net Amount, Totale merce), senza IVA.
 
-RIGHE: includi TUTTE le righe merce, una per una, così come compaiono (non unirle e non sommarle; le spese di trasporto e le note non sono righe merce).
+RIGHE: includi TUTTE le righe merce, una per una, così come compaiono nel documento, nello stesso ordine e con le stesse quantità: due righe con lo stesso articolo restano DUE righe, non unirle e non sommarle. Le spese di trasporto e le note non sono righe merce. In una fattura le righe sono SOLO quelle della fattura vera e propria: packing list, delivery note/DDT e CMR allegati NON aggiungono righe (servono solo per leggere i riferimenti).
+FATTURA CHE COPRE PIÙ ORDINI: se la riga di fattura non dice a quale ordine appartiene, ricavalo dalla packing list o dalla delivery note allegata, dove la merce è divisa in sezioni "Your Order / Our Order" (o "Customer PO / Sales Order") con prodotto e peso totale: la riga appartiene alla sezione con lo stesso prodotto e lo stesso peso (es. riga 3 "KR/70/1200" 3,210 t = sezione "Your Order 518 / Our Order PT0002222", "Total 3.210 kg"). Metti allora l'ordine Serchio in n_ordine_serchio_riga e la conferma in n_conferma_riga.
 - pos: numero di posizione della riga nel documento (Item, Pos.), come scritto.
 - n_ordine_serchio_riga: numero d'ordine Serchio indicato sulla riga (es. "Your Order No.: 512" → "512"), altrimenti "".
 - n_conferma_riga e pos_conferma_riga: SOLO in fattura, la conferma e la posizione citate sulla riga (es. "Our Order No.: 4400123 Item: 000007" → "4400123" e "000007"; "Sales Order/Item 4400123/7" → "4400123" e "7"). Altrimenti "".

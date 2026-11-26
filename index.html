@@ -196,6 +196,12 @@ footer.foot{max-width:1160px;margin:0 auto;padding:0 24px 34px;font-size:11.5px;
 table.t3 th.c3{text-align:center;border-left:1px solid var(--line)}
 table.t3 td.dates{font-size:12px;white-space:nowrap;line-height:1.55}
 table.t3 td.res{background:rgba(245,242,236,.6)}
+table.t3 tr.sub td{font-size:12px;padding-top:5px;padding-bottom:5px;color:var(--ink-soft);background:#fdfcfa}
+table.t3 tr.sub td.art{padding-left:26px;white-space:nowrap}
+table.t3 tr.sub .lbl{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink)}
+table.t3 tr.sub.F .lbl{color:var(--serchio)}
+table.t3 tr.sub td.num{color:var(--ink);font-weight:600}
+.srcs span.tot::before{content:""}
 .srcs{display:flex;flex-direction:column;gap:1px;margin-top:6px}
 .srcs span{font-size:11px;color:var(--ink-soft);white-space:nowrap}
 .srcs span::before{content:"↳ ";color:var(--ink-faint)}
@@ -1016,10 +1022,24 @@ function card3(ev) {
   const flags = all.sort((a, b) => order[a.sev] - order[b.sev])
     .map(f => `<div class="flagline"><span class="dot ${f.sev}"></span><span>${esc(f.text)}</span></div>`);
   if (!all.some(f => f.sev !== 'info')) flags.unshift('<div class="flagline"><span class="dot ok"></span><span>Ordine, conferme e fatture combaciano su tutti i controlli.</span></div>');
+  // Una riga per articolo (totali) + una riga per ogni riga di conferma e di fattura, come nei documenti
+  const subRow = (r, l, kind) => {
+    const isF = kind === 'F', ref = isF ? (r.pC != null ? r.pC : r.pO) : r.pO;
+    const pBad = l.prezzo_eur_ton != null && ref != null && Math.abs(l.prezzo_eur_ton - ref) > Recon.PTOL;
+    const when = isF ? (l.data_spedizione ? 'sped. ' + Recon.fmtD(l.data_spedizione) : '')
+      : (l.data_consegna ? 'conf. ' + Recon.fmtD(l.data_consegna) + (l.data_consegna_fine && Recon.isoDate(l.data_consegna_fine) !== Recon.isoDate(l.data_consegna) ? '–' + Recon.fmtD(l.data_consegna_fine).slice(0, 5) : '') : '');
+    const extra = isF ? [l.n_ddt ? 'DDT ' + l.n_ddt : '', l.cod_articolo_fornitore || ''] : [l.cod_articolo_fornitore || ''];
+    return `<tr class="sub ${kind}">
+      <td class="art"><span class="lbl">${isF ? 'Fattura' : 'Conferma'}</span> ${esc(Recon.lineRef(l).replace(/^(Conf|Fatt)\. /, ''))}${extra.filter(Boolean).length ? ' <span class="artsub">· ' + esc(extra.filter(Boolean).join(' · ')) + '</span>' : ''}</td>
+      <td></td><td class="num">${isF ? '' : Recon.fmtKg(l.q_kg)}</td><td class="num">${isF ? Recon.fmtKg(l.q_kg) : ''}</td>
+      <td class="res"></td><td class="res"></td>
+      <td></td><td class="num ${!isF && pBad ? 'cellbad' : ''}">${isF ? '' : Recon.fmtP(l.prezzo_eur_ton)}</td><td class="num ${isF && pBad ? 'cellbad' : ''}">${isF ? Recon.fmtP(l.prezzo_eur_ton) : ''}</td>
+      <td class="dates">${when}</td><td></td></tr>`;
+  };
   const rowsHtml = ev.rows.map(r => `
-    <tr class="${r.sev === 'err' ? 'r-err' : r.sev === 'warn' ? 'r-warn' : ''}">
+    <tr class="main ${r.sev === 'err' ? 'r-err' : r.sev === 'warn' ? 'r-warn' : ''}">
       <td class="art"><span class="artname">${esc(r.name)}</span><br><span class="artsub ${cellCls(r.cells.gram_carta || r.cells.largh_mm || r.cells.gram_pe)}">${esc(r.sub)}${r.code ? ' · ' + esc(r.code) : ''}</span>
-        <div class="srcs">${r.details.map(x => `<span>${esc(x)}</span>`).join('')}</div></td>
+        <div class="srcs">${r.details.slice(0, r.O.length).map(x => `<span>${esc(x)}</span>`).join('')}${r.C.length + r.F.length > 1 ? '<span class="tot">Totale articolo; sotto, le righe di conferme e fatture</span>' : ''}</div></td>
       <td class="num">${r.qO == null ? '—' : Recon.fmtKg(r.qO)}</td>
       <td class="num ${cellCls(r.cells.qC)}">${r.qC == null ? '—' : Recon.fmtKg(r.qC)}</td>
       <td class="num ${cellCls(r.cells.qF)}">${r.qF == null ? '—' : Recon.fmtKg(r.qF)}</td>
@@ -1028,7 +1048,7 @@ function card3(ev) {
       ${priceCell(r.O, r.pO)}${priceCell(r.C, r.pC, r.cells.pC)}${priceCell(r.F, r.pF, r.cells.pF)}
       ${dateCell(r)}
       <td><span class="pill ${STATO_CLS[r.stato] || 'info'}">${esc(r.stato)}</span></td>
-    </tr>`).join('');
+    </tr>${r.C.map(l => subRow(r, l, 'C')).join('')}${r.F.map(l => subRow(r, l, 'F')).join('')}`).join('');
   const fmtOk = ok => ok ? '<span class="okm">✓</span>' : '<b class="bad">✗</b>';
   const invHtml = ev.invoices.map(i => {
     const f = i.doc, bad = new Set(i.flags.map(x => x.text));

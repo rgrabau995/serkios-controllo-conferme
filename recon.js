@@ -17,6 +17,7 @@
   const normOrd = s => { const t = tokens(s); return t.length ? String(Number(t[0])) : null; };
   const normPos = s => { const t = tokens(s); return t.length ? String(Number(t[0])) : null; };
   const alnum = s => String(s == null ? '' : s).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const splitRefs = s => String(s == null ? '' : s).split(/[\/,;+&]|\s+e\s+|\s+and\s+/i).map(x => x.trim()).filter(Boolean);
   const digits = s => String(s == null ? '' : s).replace(/\D/g, '');
   const sum = arr => arr.reduce((s, v) => s + (v || 0), 0);
   const round = (v, d = 3) => v == null ? null : Math.round(v * 10 ** d) / 10 ** d;
@@ -65,28 +66,57 @@
       return orders.get(k);
     };
     const attach = (o, list, d) => { if (!o[list].includes(d)) o[list].push(d); };
-    for (const d of docs) {
+    const put = (k, d, r, i) => {
+      const o = get(k), isConf = d.tipo === 'conferma';
+      attach(o, isConf ? 'conferme' : 'fatture', d);
+      o[isConf ? 'C' : 'F'].push({ ...r, _doc: d, _i: i, _key: k });
+      d._orders.add(k);
+    };
+    // Ordini citati in testata (es. "512/518" oppure conferme "PT0001111/PT0002222")
+    const confKey = ref => splitRefs(ref).map(c => confToOrder.get(alnum(c))).find(Boolean) || null;
+    const headerKeys = d => {
+      const ks = uniq([
+        ...tokens(d.n_ordine_serchio).map(x => String(Number(x))).filter(x => known.has(x)),
+        ...splitRefs(d.n_conferma_fornitore).map(c => confToOrder.get(alnum(c))),
+      ]);
+      return ks.length ? ks : [pickKey(d.n_ordine_serchio, known) || confKey(d.n_conferma_fornitore)].filter(Boolean);
+    };
+    const rank = { ordine: 0, conferma: 1, fattura: 2 };
+    const ambiguous = [];
+    for (const d of [...docs].sort((a, b) => rank[a.tipo] - rank[b.tipo])) {
       const righe = d.righe || [];
+      d._orders = new Set();
       if (d.tipo === 'ordine') {
-        const o = get(normOrd(d.n_doc) || normOrd(d.n_ordine_serchio) || '?');
-        attach(o, 'ordini', d);
-        righe.forEach((r, i) => o.O.push({ ...r, _doc: d, _i: i }));
+        const k = normOrd(d.n_doc) || normOrd(d.n_ordine_serchio) || '?';
+        const o = get(k);
+        attach(o, 'ordini', d); d._orders.add(k);
+        righe.forEach((r, i) => o.O.push({ ...r, _doc: d, _i: i, _key: k }));
         continue;
       }
-      const isConf = d.tipo === 'conferma';
-      const list = isConf ? 'conferme' : 'fatture', L = isConf ? 'C' : 'F';
-      const headerKey = pickKey(d.n_ordine_serchio, known)
-        || (!isConf && d.n_conferma_fornitore ? confToOrder.get(alnum(d.n_conferma_fornitore)) : null);
+      const hk = headerKeys(d);
       righe.forEach((r, i) => {
-        const k = pickKey(r.n_ordine_serchio_riga, known)
-          || (!isConf && r.n_conferma_riga ? confToOrder.get(alnum(r.n_conferma_riga)) : null)
-          || headerKey || '?';
-        const o = get(k);
-        attach(o, list, d);
-        o[L].push({ ...r, _doc: d, _i: i });
+        const k = pickKey(r.n_ordine_serchio_riga, known) || confKey(r.n_conferma_riga);
+        if (k) put(k, d, r, i);
+        else if (hk.length > 1) ambiguous.push({ d, r, i, cand: hk });
+        else put(hk[0] || '?', d, r, i);
       });
-      if (!righe.length) attach(get(headerKey || '?'), list, d);
+      if (!righe.length) { const k = hk[0] || '?'; attach(get(k), d.tipo === 'conferma' ? 'conferme' : 'fatture', d); d._orders.add(k); }
     }
+    // Righe di un documento che copre più ordini senza dire a quale appartengono:
+    // vanno all'ordine che ha lo stesso articolo (grammatura + altezza) con la quantità ancora aperta più vicina.
+    ambiguous.sort((a, b) => (b.r.q_kg || 0) - (a.r.q_kg || 0));
+    for (const { d, r, i, cand } of ambiguous) {
+      let best = cand[0], bestScore = Infinity;
+      for (const k of cand) {
+        const o = get(k), base = (o.C.length ? o.C : o.O).filter(x => spec(x) === spec(r));
+        if (!base.length) continue;
+        const open = sum(base.map(x => x.q_kg)) - sum(o.F.filter(x => spec(x) === spec(r)).map(x => x.q_kg));
+        const score = Math.abs(open - (r.q_kg || 0));
+        if (score < bestScore) { bestScore = score; best = k; }
+      }
+      put(best, d, r, i);
+    }
+    for (const o of orders.values()) o.F.sort((a, b) => a._i - b._i);
     return [...orders.values()].sort((a, b) => (a.key === '?') - (b.key === '?') || Number(a.key) - Number(b.key));
   }
 
@@ -387,7 +417,7 @@
 
     const invoices = o.fatture.map(f => {
       const chk = invoiceChecks(f, o.conferme);
-      const altri = uniq((f.righe || []).map(r => normOrd(r.n_ordine_serchio_riga)).filter(k => k && k !== o.key));
+      const altri = [...(f._orders || [])].filter(k => k !== o.key);
       return { ...chk, altriOrdini: altri };
     });
     invoices.forEach(i => flags.push(...i.flags));
