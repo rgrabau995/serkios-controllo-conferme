@@ -252,8 +252,14 @@
     const largh = firstVal([...O, ...C, ...F], 'largh_mm');
     const sub = `${gram ?? '?'}${pe ? '+' + pe + ' PE' : ''} g/m² · H ${largh ?? '?'} mm`;
     const code = firstVal(O, 'cod_articolo_serchio') || firstVal(C, 'cod_articolo_serchio') || firstVal(F, 'cod_articolo_serchio');
-    const flags = [], cells = {};
-    const add = (sev, text, cell) => { flags.push({ sev, text: `${name}: ${text}` }); if (cell && (cells[cell] !== 'err')) cells[cell] = sev; };
+    const flags = [], cells = {}, esito = [];
+    // text: frase completa (CSV, elenchi); brief: frase breve per la colonna Esito
+    const add = (sev, text, cell, brief) => {
+      flags.push({ sev, text: `${name}: ${text}` });
+      esito.push({ sev, text: brief || text });
+      if (cell && (cells[cell] !== 'err')) cells[cell] = sev;
+    };
+    const more = (a, b) => a > b ? `${fmtKg(a - b)} kg in più` : `${fmtKg(b - a)} kg in meno`;
 
     const qO = O.length ? round(sum(O.map(r => r.q_kg)), 1) : null;
     const qC = C.length ? round(sum(C.map(r => r.q_kg)), 1) : null;
@@ -262,18 +268,18 @@
 
     // Presenza dell'articolo nei tre documenti
     if (hasOrder && !O.length) {
-      if (C.length) add('err', `confermato (${fmtKg(qC)} kg) ma non presente nell'ordine Serchio`, 'qC');
-      else if (F.length) add('err', `fatturato (${fmtKg(qF)} kg) ma non presente né nell'ordine né in conferma`, 'qF');
+      if (C.length) add('err', `confermato (${fmtKg(qC)} kg) ma non presente nell'ordine Serchio`, 'qC', 'Confermato ma non ordinato');
+      else if (F.length) add('err', `fatturato (${fmtKg(qF)} kg) ma non presente né nell'ordine né in conferma`, 'qF', 'Fatturato ma non ordinato né confermato');
     }
-    if (hasConf && !C.length && O.length) add('warn', `non ancora confermato dal fornitore (${fmtKg(qO)} kg da confermare)`, 'qC');
-    if (F.length && !C.length && hasConf && !(hasOrder && !O.length)) add('err', `fatturato (${fmtKg(qF)} kg) ma non presente nelle conferme caricate`, 'qF');
+    if (hasConf && !C.length && O.length) add('warn', `non ancora confermato dal fornitore (${fmtKg(qO)} kg da confermare)`, 'qC', `Non ancora confermato (${fmtKg(qO)} kg)`);
+    if (F.length && !C.length && hasConf && !(hasOrder && !O.length)) add('err', `fatturato (${fmtKg(qF)} kg) ma non presente nelle conferme caricate`, 'qF', 'Fatturato ma non confermato');
 
     // Quantità confermata vs ordinata
     if (O.length && C.length) {
       const d = pct(qO, qC);
       if (Math.abs(qC - qO) > KGTOL) {
-        if (Math.abs(d) > QTOL) add('err', `confermati ${fmtKg(qC)} kg su ${fmtKg(qO)} ordinati (${fmtPct(d)}, oltre la tolleranza del ${QTOL}%)`, 'qC');
-        else add('warn', `confermati ${fmtKg(qC)} kg su ${fmtKg(qO)} ordinati (${fmtPct(d)}, entro la tolleranza del ${QTOL}%)`, 'qC');
+        if (Math.abs(d) > QTOL) add('err', `confermati ${fmtKg(qC)} kg su ${fmtKg(qO)} ordinati (${fmtPct(d)}, oltre la tolleranza del ${QTOL}%)`, 'qC', `Confermati ${more(qC, qO)} dell'ordinato (${fmtPct(d)})`);
+        else add('warn', `confermati ${fmtKg(qC)} kg su ${fmtKg(qO)} ordinati (${fmtPct(d)}, entro la tolleranza del ${QTOL}%)`, 'qC', `Confermati ${more(qC, qO)} dell'ordinato (${fmtPct(d)}, in tolleranza)`);
       }
       if (C.length > 1) flags.push({ sev: 'info', text: `${name}: confermato in ${C.length} righe (${C.map(r => fmtKg(r.q_kg)).join(' + ')} kg)` });
     }
@@ -282,14 +288,14 @@
     const baseLbl = C.length ? 'confermati' : 'ordinati';
     if (F.length && base != null && qF - base > KGTOL) {
       const d = pct(base, qF);
-      if (d > QTOL) add('err', `fatturati ${fmtKg(qF)} kg, più dei ${fmtKg(base)} kg ${baseLbl} (${fmtPct(d)}, oltre la tolleranza)`, 'qF');
-      else add('warn', `fatturati ${fmtKg(qF)} kg su ${fmtKg(base)} ${baseLbl} (${fmtPct(d)}, entro la tolleranza)`, 'qF');
+      if (d > QTOL) add('err', `fatturati ${fmtKg(qF)} kg, più dei ${fmtKg(base)} kg ${baseLbl} (${fmtPct(d)}, oltre la tolleranza)`, 'qF', `Fatturati ${more(qF, base)} del ${C.length ? 'confermato' : 'ordinato'} (${fmtPct(d)})`);
+      else add('warn', `fatturati ${fmtKg(qF)} kg su ${fmtKg(base)} ${baseLbl} (${fmtPct(d)}, entro la tolleranza)`, 'qF', `Fatturati ${more(qF, base)} del ${C.length ? 'confermato' : 'ordinato'} (${fmtPct(d)}, in tolleranza)`);
     }
 
     // Prezzi: conferma vs ordine, fattura vs conferma (riga citata) o ordine
     for (const c of C) {
       if (pO != null && c.prezzo_eur_ton != null && Math.abs(c.prezzo_eur_ton - pO) > PTOL)
-        add('err', `prezzo confermato ${fmtP(c.prezzo_eur_ton)} €/t invece di ${fmtP(pO)} €/t ordinati (${lineRef(c)})`, 'pC');
+        add('err', `prezzo confermato ${fmtP(c.prezzo_eur_ton)} €/t invece di ${fmtP(pO)} €/t ordinati (${lineRef(c)})`, 'pC', `Prezzo confermato ${fmtP(c.prezzo_eur_ton)} invece di ${fmtP(pO)} €/t`);
     }
     for (const f of F) {
       if (f.prezzo_eur_ton == null) continue;
@@ -297,12 +303,12 @@
       const ref = j >= 0 && o.C[j].prezzo_eur_ton != null ? o.C[j].prezzo_eur_ton : (pC != null ? pC : pO);
       const lbl = (j >= 0 || pC != null) ? 'confermati' : 'ordinati';
       if (ref != null && Math.abs(f.prezzo_eur_ton - ref) > PTOL)
-        add('err', `prezzo fatturato ${fmtP(f.prezzo_eur_ton)} €/t invece di ${fmtP(ref)} €/t ${lbl} (${lineRef(f)})`, 'pF');
+        add('err', `prezzo fatturato ${fmtP(f.prezzo_eur_ton)} €/t invece di ${fmtP(ref)} €/t ${lbl} (${lineRef(f)})`, 'pF', `Prezzo fatturato ${fmtP(f.prezzo_eur_ton)} invece di ${fmtP(ref)} €/t`);
       // Importo riga = kg × prezzo
       if (f.importo_eur != null && f.q_kg != null) {
         const calc = f.q_kg / 1000 * f.prezzo_eur_ton;
         if (Math.abs(calc - f.importo_eur) > Math.max(EURTOL, f.importo_eur * 0.001))
-          add('err', `importo fatturato ${fmtN(f.importo_eur)} € ma ${fmtKg(f.q_kg)} kg × ${fmtP(f.prezzo_eur_ton)} €/t = ${fmtN(calc)} € (${lineRef(f)})`, 'pF');
+          add('err', `importo fatturato ${fmtN(f.importo_eur)} € ma ${fmtKg(f.q_kg)} kg × ${fmtP(f.prezzo_eur_ton)} €/t = ${fmtN(calc)} € (${lineRef(f)})`, 'pF', `Importo in fattura errato: ${fmtN(f.importo_eur)} € invece di ${fmtN(calc)} €`);
       }
     }
 
@@ -311,21 +317,21 @@
       const vals = uniq([...O, ...C, ...F].map(r => r[k]));
       if (vals.length > 1) {
         const parts = [['ord.', O], ['conf.', C], ['fatt.', F]].map(([l, L]) => { const v = uniq(L.map(r => r[k])); return v.length ? `${l} ${v.join('/')}` : null; }).filter(Boolean);
-        add(sev, `${label} diversa tra i documenti (${parts.join(' · ')} ${unit})`, k);
+        add(sev, `${label} diversa tra i documenti (${parts.join(' · ')} ${unit})`, k, `${label} diversa (${parts.join(' · ')} ${unit})`);
       }
     }
-    if (g.differenze) add('warn', g.differenze, 'desc');
+    if (g.differenze) add('warn', g.differenze, 'desc', 'Prodotto diverso: ' + g.differenze);
 
     // Date: consegna richiesta → consegna confermata → spedizione fatturata
     const dO = uniq(O.map(r => isoDate(r.data_consegna))).sort()[0] || null;
     const cFrom = uniq(C.map(r => isoDate(r.data_consegna))).sort();
     const cTo = uniq(C.map(r => isoDate(r.data_consegna_fine) || isoDate(r.data_consegna))).sort();
     const dCfrom = cFrom[0] || null, dCto = cTo[cTo.length - 1] || null;
-    if (dO && dCfrom && dCfrom > dO) add('warn', `consegna confermata dal ${fmtD(dCfrom)}, richiesta per il ${fmtD(dO)}`, 'dC');
+    if (dO && dCfrom && dCfrom > dO) add('warn', `consegna confermata dal ${fmtD(dCfrom)}, richiesta per il ${fmtD(dO)}`, 'dC', `Consegna confermata dal ${fmtD(dCfrom)} (richiesta ${fmtD(dO)})`);
     const limit = dCto || dO;
     for (const f of F) {
       const ds = isoDate(f.data_spedizione);
-      if (ds && limit && ds > limit) add('warn', `spedito il ${fmtD(ds)}, dopo la consegna ${dCto ? 'confermata (entro il ' : 'richiesta (il '}${fmtD(limit)})${f.n_ddt ? ' · DDT ' + f.n_ddt : ''}`, 'dF');
+      if (ds && limit && ds > limit) add('warn', `spedito il ${fmtD(ds)}, dopo la consegna ${dCto ? 'confermata (entro il ' : 'richiesta (il '}${fmtD(limit)})${f.n_ddt ? ' · DDT ' + f.n_ddt : ''}`, 'dF', `Spedito il ${fmtD(ds)}, oltre la data ${dCto ? 'confermata' : 'richiesta'} (${fmtD(limit)})`);
     }
 
     // Residui
@@ -349,7 +355,7 @@
 
     const sev = flags.some(f => f.sev === 'err') ? 'err' : flags.some(f => f.sev === 'warn') ? 'warn' : 'ok';
     return {
-      name, sub, code, O, C, F, qO, qC, qF, pO, pC, pF, daConf, daFatt, stato, sev, cells, flags, details,
+      name, sub, code, O, C, F, qO, qC, qF, pO, pC, pF, daConf, daFatt, stato, sev, cells, flags, details, esito,
       dO, dCfrom, dCto, dF: uniq(F.map(r => isoDate(r.data_spedizione))).sort(),
       motivo: g.motivo || '',
       eurO: O.length ? sum(O.map(r => (r.q_kg || 0) / 1000 * (r.prezzo_eur_ton || 0))) : null,
