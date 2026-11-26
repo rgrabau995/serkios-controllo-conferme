@@ -174,6 +174,37 @@ td.art{min-width:220px}
 .legend .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
 .hidden{display:none}
 footer.foot{max-width:1160px;margin:0 auto;padding:0 24px 34px;font-size:11.5px;color:var(--ink-faint);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+
+/* ---------- Controllo 2: tre documenti ---------- */
+.trio{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.slothead{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.slothead .num{width:26px;height:26px;border-radius:8px;background:var(--serchio-tint);color:var(--serchio);font-weight:800;font-size:13px;display:grid;place-items:center;flex:none}
+.slothead b{display:block;font-size:14px;font-weight:650}
+.slothead small{display:block;font-size:12px;color:var(--ink-soft)}
+.drop.small{padding:20px 12px}
+.drop.small .ic{width:40px;height:40px;margin-bottom:8px}
+.drop.small strong{font-size:14px}
+.slot .filelist .f{font-size:12.5px}
+.f .tag.odd{background:var(--warn-bg);color:var(--warn)}
+.strip{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.st3{background:#faf8f4;border:1px solid var(--line);border-radius:11px;padding:10px 12px}
+.st3 .l{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft)}
+.st3 .v{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.01em;margin-top:2px}
+.st3 .e{font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums}
+.st3.hl{background:var(--warn-bg);border-color:var(--warn-line)}
+.badge.info{background:var(--paper-2);color:var(--ink-soft)}
+table.t3 th.c3{text-align:center;border-left:1px solid var(--line)}
+table.t3 td.dates{font-size:12px;white-space:nowrap;line-height:1.55}
+table.t3 td.res{background:rgba(245,242,236,.6)}
+.srcs{display:flex;flex-direction:column;gap:1px;margin-top:6px}
+.srcs span{font-size:11px;color:var(--ink-soft);white-space:nowrap}
+.srcs span::before{content:"↳ ";color:var(--ink-faint)}
+.pill{font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap;display:inline-block}
+.pill.ok{background:var(--ok-bg);color:var(--ok)} .pill.warn{background:var(--warn-bg);color:var(--warn)}
+.pill.err{background:var(--err-bg);color:var(--err)} .pill.info{background:var(--paper-2);color:var(--ink-soft)}
+.zero{color:var(--ink-faint)} .over{color:var(--warn);font-weight:700}
+.okm{color:var(--ok);font-weight:700} b.bad{color:var(--err)}
+@media (max-width:860px){ .trio{grid-template-columns:1fr} .strip{grid-template-columns:repeat(2,minmax(0,1fr))} }
 @media (max-width:720px){
   .brandrow .co{display:none}
   main{padding:24px 16px 72px} .hwrap{padding:0 16px}
@@ -198,7 +229,7 @@ footer.foot{max-width:1160px;margin:0 auto;padding:0 24px 34px;font-size:11.5px;
   </div>
   <nav class="tabs" id="tabs">
     <button data-view="t1" class="active"><svg class="i" viewBox="0 0 24 24"><path d="M9 4h6l1 2h3v14H5V6h3z"/><path d="m9 13 2 2 4-4"/></svg>Conferme d'Ordine</button>
-    <button data-view="t2"><svg class="i" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Fatture Fornitore</button>
+    <button data-view="t2"><svg class="i" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Ordini · Conferme · Fatture</button>
     <button data-view="t3" disabled><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Fatture Estere <span class="soon">in arrivo</span></button>
   </nav>
   </div>
@@ -238,31 +269,47 @@ footer.foot{max-width:1160px;margin:0 auto;padding:0 24px 34px;font-size:11.5px;
 <section class="view" id="t2">
   <div class="pagehead">
   <div class="eyebrow">Controllo 2</div>
-  <h1>Fatture fornitore UE vs conferme</h1>
-  <p class="intro">Confronta ogni fattura fornitore UE con la relativa conferma d&apos;ordine. Verifica grammatura (incluso PE per carta accoppiata), altezza, foro/anima, quantit&agrave;, prezzo EUR/ton, codice nomenclatura doganale, massa netta Intrastat, indirizzo di consegna, P.IVA Serchio e condizioni di pagamento. Tolleranza: zero &mdash; i valori devono essere identici.</p>
-  <div class="checks"><span>Grammatura e PE</span><span>Altezza</span><span>Foro</span><span>Quantità</span><span>Prezzo EUR/ton</span><span>Cod. nomenclatura</span><span>Massa Intrastat</span><span>P.IVA</span><span>Pagamento</span></div>
+  <h1>Ordini, conferme e fatture fornitore</h1>
+  <p class="intro">Mette a confronto i tre documenti di ogni acquisto: l&apos;ordine Serchio al fornitore, le conferme d&apos;ordine e le fatture del fornitore. Collega tutto per numero d&apos;ordine Serchio, anche quando il fornitore divide un ordine su pi&ugrave; conferme o pi&ugrave; fatture, e per ogni articolo mostra quanto &egrave; stato ordinato, confermato e fatturato, le differenze di quantit&agrave;, prezzo e date, e il residuo ancora da confermare o da fatturare.</p>
+  <div class="checks"><span>Articolo</span><span>Quantità</span><span>Prezzo EUR/ton</span><span>Date di consegna</span><span>Righe mancanti</span><span>Residui</span><span>P.IVA</span><span>Totale fattura</span><span>Cod. nomenclatura</span><span>Massa Intrastat</span><span>Pagamento e consegna</span></div>
   </div>
   <div class="panel">
-    <div class="drop" id="drop2">
-      <div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></div>
-      <strong>Trascina qui i PDF oppure clicca per selezionarli</strong>
-      <small>Fatture e conferme d&apos;ordine fornitori UE, anche file separati o combinati. L&apos;abbinamento &egrave; automatico per numero ordine Serchio.</small>
-      <input type="file" id="fileinput2" accept="application/pdf" multiple class="hidden">
+    <div class="trio">
+      <div class="slot" data-slot="ordine">
+        <div class="slothead"><span class="num">1</span><div><b>Ordini Serchio</b><small>Ordine a fornitore (GEORDF)</small></div></div>
+        <div class="drop small"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></div>
+          <strong>Trascina o clicca</strong><small>uno o più PDF</small>
+          <input type="file" accept="application/pdf" multiple class="hidden"></div>
+        <div class="filelist"></div>
+      </div>
+      <div class="slot" data-slot="conferma">
+        <div class="slothead"><span class="num">2</span><div><b>Conferme fornitore</b><small>Order confirmation, anche più di una</small></div></div>
+        <div class="drop small"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></div>
+          <strong>Trascina o clicca</strong><small>uno o più PDF</small>
+          <input type="file" accept="application/pdf" multiple class="hidden"></div>
+        <div class="filelist"></div>
+      </div>
+      <div class="slot" data-slot="fattura">
+        <div class="slothead"><span class="num">3</span><div><b>Fatture fornitore</b><small>Invoice, anche parziali</small></div></div>
+        <div class="drop small"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></div>
+          <strong>Trascina o clicca</strong><small>uno o più PDF</small>
+          <input type="file" accept="application/pdf" multiple class="hidden"></div>
+        <div class="filelist"></div>
+      </div>
     </div>
-    <div class="filelist" id="filelist2"></div>
     <div class="controls">
       <button class="primary" id="run2" disabled>Avvia controllo<svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></button>
       <label><svg class="i" viewBox="0 0 24 24" style="width:15px;height:15px"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Codice di accesso <input type="password" id="access2" placeholder="Inserisci il codice"></label>
       <button class="ghost hidden" id="csv2"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v12"/><path d="m7 11 5 5 5-5"/><path d="M4 20h16"/></svg>Esporta report CSV</button>
-      <span class="hint"><span><b>Tolleranza:</b> zero su tutti i campi</span><span class="r">● Rosso: discrepanza bloccante</span><span class="y">● Giallo: dato tecnico da verificare</span></span>
+      <span class="hint"><span><b>Tolleranza quantità:</b> 10% (da verificare), oltre è bloccante</span><span><b>Prezzi:</b> devono coincidere</span><span class="r">● Rosso: discrepanza</span><span class="y">● Giallo: da verificare</span></span>
     </div>
   </div>
   <div class="summary hidden" id="summary2">
-    <div class="kpi"><div class="n" id="kCoppie">0</div><div class="l">Coppie controllate</div></div>
+    <div class="kpi"><div class="n" id="kOrd2">0</div><div class="l">Ordini controllati</div></div>
     <div class="kpi ok"><div class="n" id="kOk2">0</div><div class="l">Conformi</div></div>
-    <div class="kpi err"><div class="n" id="kErr2">0</div><div class="l">Discrepanze</div></div>
+    <div class="kpi err"><div class="n" id="kErr2">0</div><div class="l">Con discrepanze</div></div>
     <div class="kpi warn"><div class="n" id="kWarn2">0</div><div class="l">Da verificare</div></div>
-    <div class="kpi"><div class="n" id="kMassa">&#8212;</div><div class="l">Massa netta totale (kg)</div></div>
+    <div class="kpi"><div class="n" id="kRes2">&#8212;</div><div class="l">Kg ancora da fatturare</div></div>
   </div>
   <div id="results2"></div></section>
 <section class="view" id="t3">
@@ -274,9 +321,12 @@ footer.foot{max-width:1160px;margin:0 auto;padding:0 24px 34px;font-size:11.5px;
 </section>
 </main>
 <footer class="foot"><span>Serchio Distribuzione S.r.l. · Suite Controlli</span><span>Lettura documenti con Claude (Anthropic)</span></footer>
+<script src="recon.js"></script>
 <script>
 const $ = id => document.getElementById(id);
-const BACKEND_URL = 'https://serkios-controllo-conferme-production.up.railway.app';
+// Pagina servita da Railway (o in locale): stesso server. Aperta come file o da Vercel: server Railway.
+const BACKEND_URL = (location.protocol.startsWith('http') && !location.hostname.endsWith('vercel.app'))
+  ? '' : 'https://serkios-controllo-conferme-production.up.railway.app';
 const files = [];
 document.querySelectorAll('#tabs button').forEach(b => {
   b.addEventListener('click', () => {
@@ -307,7 +357,7 @@ function renderFiles(){
     const d = document.createElement('div'); d.className = 'f';
     const stTxt = { wait:'in attesa', run:'analisi…', done:'estratto', fail:'errore' }[f.status];
     const tags = (f.docs || []).map(doc =>
-      doc.tipo === 'fattura' ? `<span class="tag" title="Le fatture si controllano nella scheda Fatture Fornitore">Fattura ${doc.n_doc || ''} · ignorata</span>`
+      doc.tipo === 'fattura' ? `<span class="tag" title="Le fatture si controllano nella scheda Ordini · Conferme · Fatture">Fattura ${doc.n_doc || ''} · ignorata</span>`
       : `<span class="tag">${doc.tipo === 'ordine' ? 'Ordine' : 'Conferma'} ${tagNums(doc)}</span>`).join('');
     const stEl = f.status === 'run' ? '<span class="spin"></span>' : `<span class="st ${f.status}">${stTxt}</span>`;
     d.innerHTML = `<span class="name">${f.file.name}</span>${tags}${stEl}
@@ -659,7 +709,7 @@ function renderResults(){
     } else { box.appendChild(orphanCard(key, ord, lines, meta)); }
   }
   const ignored1 = files.filter(f => (f.docs || []).some(d => d.tipo === 'fattura')).map(f => f.file.name);
-  if (ignored1.length) box.appendChild(ignoredCard(ignored1, 'fatture', 'Fatture Fornitore'));
+  if (ignored1.length) box.appendChild(ignoredCard(ignored1, 'fatture', 'Ordini · Conferme · Fatture'));
   for (const e of files.filter(f => f.status === 'fail')){
     const d = document.createElement('div');
     d.className = 'supcard s-err open';
@@ -795,376 +845,258 @@ $('csv').addEventListener('click', () => {
 });
 
 // ============================================================
-// TOOL 2 — Fatture Intracomunitarie
+// TOOL 2 — Ordini, conferme e fatture fornitore (riconciliazione a tre documenti)
+// La logica di confronto è in recon.js (condivisa con i test).
 // ============================================================
-const PROMPT2 = `Questo PDF contiene uno o piu documenti commerciali del settore carta: una FATTURA fornitore intracomunitaria e/o una CONFERMA D'ORDINE.
-
-TIPO DOCUMENTO:
-- "fattura": invoice emessa dal fornitore verso Serchio Distribuzione
-- "conferma": conferma d'ordine del fornitore
-
-NUMERO ORDINE SERCHIO (n_ordine_serchio): Cerca: "Your Order", "Customer Order No", "Buyer's Order No", "VS. ORDINE", "PO/Reference No", "Customer Ref", "Order no", "Comanda". Estrai SOLO il numero (es. "177", "36", "127").
-
-NORMALIZZAZIONE:
-- Quantita in KG (se TO x1000)
-- Prezzo in EUR/tonnellata (se EUR/kg x1000; se EUR/1000kg e gia EUR/ton)
-- largh_mm, foro_mm, diam_mm sempre in MM (se cm x10)
-
-GRAMMATURA: gram_carta = g/m2 carta, gram_pe = g/m2 polietilene (es Tiger "45+9": gram_carta=45, gram_pe=9; null se assente)
-
-MASSA NETTA (massa_netta_kg) per Intrastat: "net weight","nett kg","peso netto","net mass". In KG.
-
-CODICE NOMENCLATURA (cod_nomenclatura): "CN Code","CN","HS number","Tariff No","Codice Intra","CUSTOM TARIF". Codice esatto.
-
-P.IVA SERCHIO (piva_buyer): deve essere IT05147461007.
-
-INDIRIZZO CONSEGNA (indirizzo_consegna): Consignee/Ship-to/Delivery address. Nome + via + citta.
-
-PAGAMENTO (pagamento): testo esatto condizioni.
-
-RIGHE: desc, gram_carta, gram_pe(null), largh_mm, diam_mm(null), foro_mm(null), q_kg, prezzo_eur_ton, importo_eur, cod_nomenclatura_riga(null).
-
-Rispondi SOLO JSON minificato. Schema:
-{"documenti":[{"tipo":"fattura|conferma","fornitore":"","n_doc":"","n_ordine_serchio":"","data":"","piva_buyer":"","indirizzo_consegna":"","pagamento":"","massa_netta_kg":null,"cod_nomenclatura":"","righe":[{"desc":"","gram_carta":null,"gram_pe":null,"largh_mm":null,"diam_mm":null,"foro_mm":null,"q_kg":null,"prezzo_eur_ton":null,"importo_eur":null,"cod_nomenclatura_riga":null}]}]}`;
-
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const SLOTS = ['ordine', 'conferma', 'fattura'];
+const SLOT_LBL = { ordine: 'Ordine', conferma: 'Conferma', fattura: 'Fattura' };
 const files2 = [];
-const drop2 = $('drop2'), fi2 = $('fileinput2');
-drop2.addEventListener('click', () => fi2.click());
-drop2.addEventListener('dragover', e => { e.preventDefault(); drop2.classList.add('over'); });
-drop2.addEventListener('dragleave', () => drop2.classList.remove('over'));
-drop2.addEventListener('drop', e => { e.preventDefault(); drop2.classList.remove('over'); addFiles2([...e.dataTransfer.files]); });
-fi2.addEventListener('change', () => { addFiles2([...fi2.files]); fi2.value = ''; });
 
-function addFiles2(list) {
+document.querySelectorAll('#t2 .slot').forEach(slotEl => {
+  const slot = slotEl.dataset.slot, dz = slotEl.querySelector('.drop'), inp = slotEl.querySelector('input');
+  dz.addEventListener('click', () => inp.click());
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); addFiles2([...e.dataTransfer.files], slot); });
+  inp.addEventListener('change', () => { addFiles2([...inp.files], slot); inp.value = ''; });
+});
+
+function addFiles2(list, slot) {
   for (const f of list) {
     if (f.type !== 'application/pdf') continue;
-    if (files2.some(x => x.file.name === f.name)) continue;
-    files2.push({ file: f, status: 'wait', docs: null });
+    if (files2.some(x => x.file.name === f.name && x.file.size === f.size)) continue;
+    files2.push({ file: f, slot, status: 'wait', docs: null });
   }
   renderFiles2();
 }
 
+function docTag(doc, slot) {
+  const ord = [...new Set([doc.n_ordine_serchio, ...(doc.righe || []).map(r => r.n_ordine_serchio_riga)].map(Recon.normOrd).filter(Boolean))];
+  const txt = doc.tipo === 'ordine' ? `Ordine ${doc.n_doc || doc.n_ordine_serchio || '?'}`
+    : `${SLOT_LBL[doc.tipo]} ${doc.n_doc || '?'}${ord.length ? ' · ord. ' + ord.join('+') : ''}`;
+  const odd = doc.tipo !== slot;
+  return `<span class="tag${odd ? ' odd' : ''}"${odd ? ` title="Caricato tra: ${SLOT_LBL[slot]}. Letto come: ${SLOT_LBL[doc.tipo]}"` : ''}>${esc(txt)}${odd ? ' (letto come ' + SLOT_LBL[doc.tipo].toLowerCase() + ')' : ''}</span>`;
+}
+
 function renderFiles2() {
-  const el = $('filelist2'); el.innerHTML = '';
-  files2.forEach((f, i) => {
-    const d = document.createElement('div'); d.className = 'f';
-    const stTxt = { wait: 'in attesa', run: 'analisi…', done: 'estratto', fail: 'errore' }[f.status];
-    const tags = (f.docs || []).map(doc => doc.tipo === 'ordine'
-      ? `<span class="tag" title="Gli ordini si controllano nella scheda Conferme d'Ordine">Ordine ${doc.n_ordine_serchio || ''} · ignorato</span>`
-      : `<span class="tag">${doc.tipo === 'fattura' ? 'Fattura' : 'Conferma'} ${doc.n_doc || ''}</span>`).join('');
-    const stEl = f.status === 'run' ? '<span class="spin"></span>' : `<span class="st ${f.status}">${stTxt}</span>`;
-    d.innerHTML = `<span class="name">${f.file.name}</span>${tags}${stEl}<button class="rm" title="Rimuovi" ${f.status === 'run' ? 'disabled' : ''}>×</button>`;
-    const rm = d.querySelector('.rm'); if (rm) rm.onclick = () => { files2.splice(i, 1); renderFiles2(); };
-    el.appendChild(d);
-  });
+  for (const slot of SLOTS) {
+    const el = document.querySelector(`#t2 .slot[data-slot="${slot}"] .filelist`);
+    el.innerHTML = '';
+    files2.forEach((f, i) => {
+      if (f.slot !== slot) return;
+      const d = document.createElement('div'); d.className = 'f';
+      const stTxt = { wait: 'in attesa', run: 'lettura…', done: 'letto', fail: 'errore' }[f.status];
+      const tags = (f.docs || []).map(doc => docTag(doc, slot)).join('');
+      const stEl = f.status === 'run' ? '<span class="spin"></span>' : `<span class="st ${f.status}"${f.error ? ` title="${esc(f.error)}"` : ''}>${stTxt}</span>`;
+      d.innerHTML = `<span class="name" title="${esc(f.file.name)}">${esc(f.file.name)}</span>${tags}${stEl}<button class="rm" title="Rimuovi" ${f.status === 'run' ? 'disabled' : ''}>×</button>`;
+      d.querySelector('.rm').onclick = () => { files2.splice(i, 1); renderFiles2(); };
+      el.appendChild(d);
+    });
+  }
   $('run2').disabled = files2.length === 0 || files2.some(f => f.status === 'run');
 }
 
-async function analyze2(entry) {
-  const b64 = await toB64(entry.file);
+async function post2(path, body) {
   let resp;
   try {
-    resp = await fetch(BACKEND_URL + '/api/analizza2', {
+    resp = await fetch(BACKEND_URL + path, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pdf: b64, code: $('access2').value.trim() })
+      body: JSON.stringify({ ...body, code: $('access2').value.trim() }),
     });
-  } catch (e) { throw new Error("connessione al server non disponibile"); }
-  const data = await resp.json();
-  if (data.error) throw new Error(data.error || 'Errore server');
-  return data.documenti || [];
+  } catch (e) { throw new Error('connessione al server non disponibile'); }
+  let data;
+  try { data = await resp.json(); } catch (e) { throw new Error('risposta del server non valida (' + resp.status + ')'); }
+  if (!resp.ok || data.error) throw new Error(data.error || 'errore server ' + resp.status);
+  return data;
 }
 
-const normOrd2 = s => { const t = String(s || '').match(/\d+/g); return t ? t[0] : null; };
-
-function buildGroups2() {
-  const fatture = new Map(), conferme = new Map();
-  for (const f of files2) {
-    if (f.status !== 'done' || !f.docs) continue;
-    for (const d of f.docs) {
-      d._file = f.file.name;
-      const k = normOrd2(d.n_ordine_serchio);
-      if (!k) continue;
-      const target = d.tipo === 'fattura' ? fatture : d.tipo === 'conferma' ? conferme : null;
-      if (!target) continue;
-      const prev = target.get(k);
-      // Più fatture o più conferme per lo stesso ordine: le righe vengono messe insieme invece di perderne una.
-      if (prev) {
-        const merged = { ...prev, righe: [...(prev.righe || []), ...(d.righe || [])] };
-        merged.n_doc = [prev.n_doc, d.n_doc].filter(Boolean).join(' + ') || null;
-        if (prev.massa_netta_kg != null || d.massa_netta_kg != null)
-          merged.massa_netta_kg = (prev.massa_netta_kg || 0) + (d.massa_netta_kg || 0);
-        target.set(k, merged);
-      } else target.set(k, d);
-    }
-  }
-  return { fatture, conferme };
+async function analyze3(entry) {
+  const data = await post2('/api/analizza3', { pdf: await toB64(entry.file), atteso: entry.slot });
+  return (data.documenti || []).map(d => ({ ...d, _file: entry.file.name, _slot: entry.slot }));
 }
 
-function lineKey2(r) { return `${Math.round(r.gram_carta || 0)}|${Math.round(r.largh_mm || 0)}`; }
-
-
-function eqStr2(a, b) {
-  if (a == null || b == null) return null;
-  const n = s => String(s).toLowerCase().trim().replace(/\s+/g, ' ');
-  return n(a) === n(b);
+// Esegue i lavori con al massimo n richieste in parallelo
+async function pool(items, n, fn) {
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => {
+    while (next < items.length) { const it = items[next++]; await fn(it); }
+  }));
 }
-function eqNum2(a, b, tol = 1e-6) { if (a == null || b == null) return null; return Math.abs(Number(a) - Number(b)) <= tol; }
-const MERGE2 = { match: lineKey2, price: 'prezzo_eur_ton',
-  sum: ['q_kg', 'importo_eur'], same: ['gram_pe', 'diam_mm', 'foro_mm', 'cod_nomenclatura_riga'] };
-const LABELS2 = { gram_pe: 'grammatura PE', diam_mm: 'diametro', foro_mm: 'foro', cod_nomenclatura_riga: 'codice nomenclatura' };
-
-const matches2 = new Map();
-const FIELDS2 = ['desc', 'gram_carta', 'gram_pe', 'largh_mm', 'diam_mm', 'foro_mm', 'q_kg', 'prezzo_eur_ton'];
-async function prepareMatches2(){
-  matches2.clear();
-  const { fatture, conferme } = buildGroups2();
-  const jobs = [];
-  for (const [key, fat] of fatture){
-    const conf = conferme.get(key);
-    if (!conf) continue;
-    const testi = [];
-    if (fat.indirizzo_consegna && conf.indirizzo_consegna) testi.push({ campo: 'indirizzo_consegna', A: fat.indirizzo_consegna, B: conf.indirizzo_consegna });
-    if (fat.pagamento && conf.pagamento) testi.push({ campo: 'pagamento', A: fat.pagamento, B: conf.pagamento });
-    jobs.push(aiMatch('fattura del fornitore', 'conferma d\'ordine del fornitore',
-      compactRows(fat.righe || [], FIELDS2), compactRows(conf.righe || [], FIELDS2), testi, 'access2')
-      .then(r => matches2.set(key, r)));
-  }
-  await Promise.all(jobs);
-}
-const digits = s => String(s || '').replace(/\D/g, '');
-function evaluate2(key, fat, conf) {
-  const flagsErr = [], flagsWarn = [];
-  let sevC = false, sevT = false;
-  const m = conf ? matches2.get(key) : null;
-  if (conf && matches2.size && !m) flagsWarn.push(AI_OFF);
-  const pivaOk = digits(fat.piva_buyer).endsWith('05147461007');
-  if (!pivaOk) { sevC = true; flagsErr.push(`P.IVA Serchio in fattura errata: "${fat.piva_buyer || 'assente'}" (attesa IT05147461007)`); }
-  let destOk = null;
-  if (fat.indirizzo_consegna && conf && conf.indirizzo_consegna) {
-    const v = textVerdict(m, 'indirizzo_consegna');
-    destOk = v ? v.equivalenti : sameAddress(fat.indirizzo_consegna, conf.indirizzo_consegna);
-    if (!destOk) { sevC = true; flagsErr.push(`Indirizzo consegna diverso — Fattura: "${fat.indirizzo_consegna}" · Conferma: "${conf.indirizzo_consegna}"` + (v && v.nota ? ` (${v.nota})` : '')); }
-  }
-  let pagOk = null;
-  if (fat.pagamento && conf && conf.pagamento) {
-    const v = textVerdict(m, 'pagamento');
-    pagOk = v ? v.equivalenti : eqStr2(fat.pagamento, conf.pagamento);
-    if (!pagOk) { sevC = true; flagsErr.push(`Cond. pagamento diverse — Fattura: "${fat.pagamento}" · Conferma: "${conf.pagamento}"` + (v && v.nota ? ` (${v.nota})` : '')); }
-  }
-  if (fat.cod_nomenclatura && conf && conf.cod_nomenclatura) {
-    const a = digits(fat.cod_nomenclatura), b = digits(conf.cod_nomenclatura);
-    if (a !== b) {
-      if (a && b && (a.startsWith(b) || b.startsWith(a))) { sevT = true; flagsWarn.push(`Cod. nomenclatura scritto con livello di dettaglio diverso — Fattura: "${fat.cod_nomenclatura}" · Conferma: "${conf.cod_nomenclatura}"`); }
-      else { sevC = true; flagsErr.push(`Cod. nomenclatura diverso — Fattura: "${fat.cod_nomenclatura}" · Conferma: "${conf.cod_nomenclatura}"`); }
-    }
-  }
-  const A2 = fat.righe || [], B2 = conf ? (conf.righe || []) : [];
-  const flagsInfo = [];
-  const pairs = (m ? pairsFromGroups(A2, B2, m.gruppi, MERGE2) : pairRows(A2, B2, MERGE2)).map(({ a, b, differenze }) => ({ f: a, c: b, diff: differenze }));
-  const rows = pairs.map(({ f, c, diff }) => {
-    const name = f?.desc || c?.desc || '—';
-    const gramStr = `${f?.gram_carta ?? c?.gram_carta ?? '?'}${(f?.gram_pe || c?.gram_pe) ? '+' + (f?.gram_pe ?? c?.gram_pe) + ' PE' : ''} g/m²`;
-    const notes = [partsNote(f, 'Fattura'), partsNote(c, 'Conferma')].filter(Boolean);
-    const sub = `${gramStr} · H ${f?.largh_mm ?? c?.largh_mm ?? '?'} mm`;
-    const cells = {}; let rErr = false, rWarn = false;
-    const fP = v => v == null ? '—' : v.toLocaleString('it-IT', { maximumFractionDigits: 2 });
-    if (mergeFlags(f, 'Fattura', name, 'EUR/ton', fP, LABELS2, flagsWarn)) rWarn = true;
-    if (mergeFlags(c, 'Conferma', name, 'EUR/ton', fP, LABELS2, flagsWarn)) rWarn = true;
-    if (!f) { notes.push('Non presente in questa fattura'); flagsInfo.push(`Riga della conferma non presente in questa fattura (consegna o fatturazione parziale): ${name} · ${fmtNum0(c.q_kg)} kg`); }
-    else if (!c && conf) { rErr = true; flagsErr.push(`Riga fattura senza corrispondenza in conferma: ${name}`); }
-    else if (c) {
-      if (f.gram_carta != null && c.gram_carta != null && !eqNum2(f.gram_carta, c.gram_carta)) { rErr = true; cells.gram_carta = 1; flagsErr.push(`Grammatura carta ${name}: fat. ${f.gram_carta} → conf. ${c.gram_carta} g/m²`); }
-      if (f.gram_pe != null && c.gram_pe != null && !eqNum2(f.gram_pe, c.gram_pe)) { rErr = true; cells.gram_pe = 1; flagsErr.push(`Grammatura PE ${name}: fat. ${f.gram_pe} → conf. ${c.gram_pe} g/m²`); }
-      if (f.largh_mm != null && c.largh_mm != null && !eqNum2(f.largh_mm, c.largh_mm)) { rErr = true; cells.largh_mm = 1; flagsErr.push(`Altezza ${name}: fat. ${f.largh_mm} mm → conf. ${c.largh_mm} mm`); }
-      if (f.foro_mm != null && c.foro_mm != null && !eqNum2(f.foro_mm, c.foro_mm)) { rWarn = true; cells.foro_mm = 1; flagsWarn.push(`Foro/anima ${name}: fat. ${f.foro_mm} mm → conf. ${c.foro_mm} mm`); }
-      if (f.diam_mm != null && c.diam_mm != null && !eqNum2(f.diam_mm, c.diam_mm)) { rWarn = true; cells.diam_mm = 1; flagsWarn.push(`Diametro ${name}: fat. ${f.diam_mm} mm → conf. ${c.diam_mm} mm`); }
-      const dq2 = pct(c.q_kg, f.q_kg);
-      if (f.q_kg != null && c.q_kg != null && !eqNum2(f.q_kg, c.q_kg, 0.5)) {
-        if (dq2 != null && Math.abs(dq2) <= QTOL) { rWarn = true; cells.q_kg_w = 1; flagsWarn.push(`Quantità ${name}: fat. ${fmtNum0(f.q_kg)} → conf. ${fmtNum0(c.q_kg)} kg (${dq2>0?'+':''}${dq2.toFixed(1)}%, entro la tolleranza del ${QTOL}%)`); }
-        else { rErr = true; cells.q_kg = 1; flagsErr.push(`Quantità ${name}: fat. ${fmtNum0(f.q_kg)} → conf. ${fmtNum0(c.q_kg)} kg` + (dq2 != null ? ` (${dq2>0?'+':''}${dq2.toFixed(1)}%, oltre la tolleranza del ${QTOL}%)` : '')); }
-      }
-      if (diff) { rWarn = true; flagsWarn.push(`Prodotto ${name}: ${diff}`); }
-      if (f.prezzo_eur_ton != null && c.prezzo_eur_ton != null && !eqNum2(f.prezzo_eur_ton, c.prezzo_eur_ton, 0.01)) { rErr = true; cells.prezzo_eur_ton = 1; flagsErr.push(`Prezzo ${name}: fat. ${f.prezzo_eur_ton} → conf. ${c.prezzo_eur_ton} EUR/ton`); }
-      const cnf = f.cod_nomenclatura_riga || fat.cod_nomenclatura;
-      const cnc = c.cod_nomenclatura_riga || (conf && conf.cod_nomenclatura);
-      if (cnf && cnc && digits(cnf) !== digits(cnc) && !(digits(cnf).startsWith(digits(cnc)) || digits(cnc).startsWith(digits(cnf)))) { rErr = true; cells.cn = 1; flagsErr.push(`Cod. nomenclatura ${name}: fat. "${cnf}" → conf. "${cnc}"`); }
-    }
-    if (rErr) sevC = true; if (rWarn) sevT = true;
-    return { f, c, name, sub, notes, cells, rErr, rWarn };
-  });
-  return { fat, conf, rows, flagsErr, flagsWarn, flagsInfo, sevC, sevT, pivaOk, destOk, pagOk };
-}
-
-$('run2').addEventListener('click', async () => {
-  $('run2').disabled = true;
-  for (const entry of files2) {
-    if (entry.status === 'done' && entry.docs) continue;
-    entry.status = 'run'; renderFiles2();
-    try { entry.docs = await analyze2(entry); entry.status = 'done'; }
-    catch (err) { entry.status = 'fail'; entry.error = err.message; }
-    renderFiles2();
-  }
-  showMatching('results2');
-  await prepareMatches2();
-  renderResults2();
-  $('csv2').classList.remove('hidden');
-});
 
 let lastEvals2 = [];
+$('run2').addEventListener('click', async () => {
+  $('run2').disabled = true;
+  const todo = files2.filter(f => !(f.status === 'done' && f.docs));
+  todo.forEach(f => { f.status = 'run'; f.error = null; });
+  renderFiles2();
+  await pool(todo, 3, async entry => {
+    try { entry.docs = await analyze3(entry); entry.status = 'done'; }
+    catch (err) { entry.status = 'fail'; entry.error = err.message; }
+    renderFiles2();
+  });
+  const docs = files2.filter(f => f.status === 'done').flatMap(f => f.docs);
+  const orders = Recon.buildOrders(docs);
+  $('results2').innerHTML = '<div class="panel" style="display:flex;align-items:center;gap:12px"><span class="f"><span class="spin"></span></span>' +
+    `<span>Confronto in corso: l'AI sta abbinando gli articoli di ${orders.length} ordin${orders.length === 1 ? 'e' : 'i'} tra ordine, conferme e fatture…</span></div>`;
+  const ai = new Map();
+  await Promise.all(orders.map(async o => {
+    // Ordine senza conferme né fatture: niente da abbinare
+    if (!o.C.length && !o.F.length) { ai.set(o.key, { articoli: Recon.fallbackGroups(o), testi: [] }); return; }
+    try { ai.set(o.key, await post2('/api/riconcilia', Recon.matchPayload(o))); }
+    catch (e) { console.warn('Abbinamento AI non riuscito per ordine', o.key, e); ai.set(o.key, null); }
+  }));
+  lastEvals2 = orders.map(o => Recon.evaluateOrder(o, ai.get(o.key)));
+  renderResults2();
+  $('run2').disabled = false;
+  $('csv2').classList.toggle('hidden', !lastEvals2.length);
+});
 
 function renderResults2() {
   const box = $('results2'); box.innerHTML = '';
-  const { fatture, conferme } = buildGroups2();
-  let ok = 0, err = 0, warn = 0, massaTot = 0;
-  lastEvals2 = [];
-  const allKeys = new Set([...fatture.keys(), ...conferme.keys()]);
-  for (const key of [...allKeys].sort((a, b) => Number(a) - Number(b))) {
-    const fat = fatture.get(key), conf = conferme.get(key);
-    if (!fat && conf) { box.appendChild(orphanCard2(key, null, conf)); warn++; continue; }
-    if (fat && !conf) {
-      const ev = evaluate2(key, fat, null); lastEvals2.push({ key, ev }); warn++;
-      massaTot += fat.massa_netta_kg || 0; box.appendChild(card2(key, ev, true)); continue;
-    }
-    const ev = evaluate2(key, fat, conf); lastEvals2.push({ key, ev });
-    massaTot += fat.massa_netta_kg || 0;
-    if (ev.sevC) err++; else if (ev.sevT) warn++; else ok++;
-    box.appendChild(card2(key, ev, false));
+  let ok = 0, err = 0, warn = 0, res = 0;
+  for (const ev of lastEvals2) {
+    if (ev.sev === 'err') err++; else if (ev.sev === 'warn') warn++; else ok++;
+    res += ev.totals.daFatt || 0;
+    box.appendChild(card3(ev));
   }
-  const ignored2 = files2.filter(f => (f.docs || []).some(d => d.tipo === 'ordine')).map(f => f.file.name);
-  if (ignored2.length) box.appendChild(ignoredCard(ignored2, 'ordini Serchio', "Conferme d'Ordine"));
   for (const e of files2.filter(f => f.status === 'fail')) {
     const d = document.createElement('div'); d.className = 'supcard s-err open';
-    d.innerHTML = `<div class="suphead"><span class="chev">&#9658;</span><h3>${e.file.name}</h3><span class="badge err">errore</span></div><div class="supbody" style="display:block"><div class="errmsg">Analisi non riuscita: ${e.error}. Rilancia per riprovare.</div></div>`;
+    d.innerHTML = `<div class="suphead"><span class="chev">&#9658;</span><h3>${esc(e.file.name)}</h3><span class="badge err">errore di lettura</span></div><div class="supbody" style="display:block"><div class="errmsg">Lettura non riuscita: ${esc(e.error)}. Premi di nuovo "Avvia controllo" per riprovare.</div></div>`;
     box.appendChild(d);
   }
+  if (!lastEvals2.length && !files2.some(f => f.status === 'fail'))
+    box.innerHTML = '<div class="panel">Nessun documento leggibile: carica almeno un ordine, una conferma o una fattura.</div>';
   $('summary2').classList.remove('hidden');
-  $('kCoppie').textContent = ok + err + warn;
+  $('kOrd2').textContent = lastEvals2.length;
   $('kOk2').textContent = ok; $('kErr2').textContent = err; $('kWarn2').textContent = warn;
-  $('kMassa').textContent = massaTot > 0 ? massaTot.toLocaleString('it-IT', { maximumFractionDigits: 0 }) + ' kg' : '—';
+  $('kRes2').textContent = lastEvals2.length ? Recon.fmtKg(res) : '—';
 }
 
-function card2(key, ev, missingConf) {
-  const { fat, conf, rows, flagsErr, flagsWarn, flagsInfo, sevC, sevT, pivaOk, destOk } = ev;
-  const sev = missingConf ? 'warn' : sevC ? 'err' : sevT ? 'warn' : 'ok';
+const STATO_CLS = { 'evaso': 'ok', 'evaso in tolleranza': 'ok', 'da fatturare': 'info', 'fatturato in parte': 'info', 'da confermare': 'warn', 'fatturato in eccesso': 'err' };
+const AVZ_CLS = { 'fatturato completamente': 'ok', 'fatturato in parte': 'info', 'confermato, da fatturare': 'info', 'confermato in parte': 'warn', 'da confermare': 'warn' };
+const cellCls = sev => sev === 'err' ? 'cellbad' : sev === 'warn' ? 'cellwarn' : '';
+function resCell(v, tolNote) {
+  if (v == null) return '—';
+  if (Math.abs(v) <= Recon.KGTOL) return '<span class="zero">0</span>';
+  if (v < 0) return `<span class="over" title="quantità in più">+${Recon.fmtKg(-v)}</span>`;
+  return `<b>${Recon.fmtKg(v)}</b>${tolNote ? '<br><span class="artsub">in tolleranza</span>' : ''}`;
+}
+function priceCell(lines, avg, sev) {
+  const ps = [...new Set(lines.map(r => r.prezzo_eur_ton).filter(v => v != null))];
+  if (!ps.length) return `<td class="num">—</td>`;
+  return `<td class="num ${cellCls(sev)}">${ps.map(Recon.fmtP).join('<br>')}</td>`;
+}
+function dateCell(r) {
+  const parts = [];
+  if (r.dO) parts.push(`<span title="richiesta nell'ordine">ord. ${Recon.fmtD(r.dO)}</span>`);
+  if (r.dCfrom) parts.push(`<span class="${cellCls(r.cells.dC)}" title="confermata">conf. ${Recon.fmtD(r.dCfrom)}${r.dCto && r.dCto !== r.dCfrom ? '–' + Recon.fmtD(r.dCto).slice(0, 5) : ''}</span>`);
+  if (r.dF.length) parts.push(`<span class="${cellCls(r.cells.dF)}" title="spedizione in fattura">sped. ${r.dF.map(Recon.fmtD).join(', ')}</span>`);
+  return `<td class="dates">${parts.join('<br>') || '—'}</td>`;
+}
+
+function card3(ev) {
+  const o = ev.order, t = ev.totals;
   const d = document.createElement('div');
-  d.className = `supcard s-${sev}` + (sev !== 'ok' ? ' open' : '');
-  const badge = missingConf ? '<span class="badge warn">conferma mancante</span>'
-    : sevC ? '<span class="badge err">discrepanze</span>'
-    : sevT ? '<span class="badge warn">da verificare</span>'
-    : '<span class="badge ok">conforme</span>';
-  const rowsHtml = rows.map(({ f, c, name, sub, notes, cells, rErr, rWarn }) => {
-    const showPE = f?.gram_pe != null || c?.gram_pe != null;
-    const fN = (v, dec = 2) => v == null ? '—' : v.toLocaleString('it-IT', { minimumFractionDigits: dec, maximumFractionDigits: dec });
-    return `<tr class="${rErr ? 'r-err' : rWarn ? 'r-warn' : ''}">
-      <td class="art"><span class="artname">${name}</span><br><span class="artsub">${sub}</span>${noteHtml(notes)}</td>
-      <td class="num ${cells.gram_carta ? 'cellbad' : ''}">${f?.gram_carta ?? '—'}${showPE ? `<br><span class="artsub">${f?.gram_pe ?? '—'} PE</span>` : ''}</td>
-      <td class="num ${cells.gram_carta ? 'cellbad' : ''}">${c?.gram_carta ?? '—'}${showPE ? `<br><span class="artsub">${c?.gram_pe ?? '—'} PE</span>` : ''}</td>
-      <td class="num ${cells.largh_mm ? 'cellbad' : ''}">${f?.largh_mm ?? '—'}</td>
-      <td class="num ${cells.largh_mm ? 'cellbad' : ''}">${c?.largh_mm ?? '—'}</td>
-      <td class="num ${cells.foro_mm ? 'cellwarn' : ''}">${f?.foro_mm ?? '—'}${cells.foro_mm ? ` → ${c?.foro_mm ?? '—'}` : ''}</td>
-      <td class="num ${cells.q_kg ? 'cellbad' : cells.q_kg_w ? 'cellwarn' : ''}">${f?.q_kg != null ? f.q_kg.toLocaleString('it-IT', { maximumFractionDigits: 0 }) : '—'}</td>
-      <td class="num ${cells.q_kg ? 'cellbad' : cells.q_kg_w ? 'cellwarn' : ''}">${c?.q_kg != null ? c.q_kg.toLocaleString('it-IT', { maximumFractionDigits: 0 }) : '—'}</td>
-      <td class="num ${cells.prezzo_eur_ton ? 'cellbad' : ''}">${fN(f?.prezzo_eur_ton)}</td>
-      <td class="num ${cells.prezzo_eur_ton ? 'cellbad' : ''}">${c != null ? fN(c?.prezzo_eur_ton) : '—'}</td>
-      <td class="${cells.cn ? 'cellbad' : ''}">${f?.cod_nomenclatura_riga || fat.cod_nomenclatura || '—'}</td>
-    </tr>`;
+  d.className = `supcard s-${ev.sev}` + (ev.sev !== 'ok' ? ' open' : '');
+  const badge = ev.sev === 'err' ? '<span class="badge err">discrepanze</span>' : ev.sev === 'warn' ? '<span class="badge warn">da verificare</span>' : '<span class="badge ok">conforme</span>';
+  const avz = `<span class="badge ${AVZ_CLS[ev.avanzamento] || 'info'}">${esc(ev.avanzamento)}</span>`;
+  const ord = o.ordini[0];
+  const meta = [
+    ev.key === '?' ? 'Ordine Serchio non identificato' : `Ordine n. ${esc(ev.key)}${ord && ord.data ? ' del ' + Recon.fmtD(ord.data) : ''}${ord ? '' : ' (non caricato)'}`,
+    `Conferme: ${o.conferme.map(c => esc(c.n_doc || c._file)).join(', ') || '—'}`,
+    `Fatture: ${o.fatture.map(f => esc(f.n_doc || f._file)).join(', ') || '—'}`,
+  ].join(' · ');
+  const stat = (l, kg, eur, cls = '') => `<div class="st3 ${cls}"><div class="l">${l}</div><div class="v">${kg == null ? '—' : Recon.fmtKg(kg) + ' kg'}</div>${eur != null ? `<div class="e">${Recon.fmtN(eur)} €</div>` : ''}</div>`;
+  const strip = `<div class="strip">
+    ${stat('Ordinato', t.kgO, t.eurO)}${stat('Confermato', t.kgC, t.eurC)}${stat('Fatturato', t.kgF, t.eurF)}
+    ${stat('Da confermare', t.daConf, null, t.daConf > Recon.KGTOL ? 'hl' : '')}${stat('Da fatturare', t.daFatt, null, t.daFatt > Recon.KGTOL ? 'hl' : '')}</div>`;
+  const all = [...ev.flags, ...ev.rows.flatMap(r => r.flags)];
+  const order = { err: 0, warn: 1, info: 2 };
+  const flags = all.sort((a, b) => order[a.sev] - order[b.sev])
+    .map(f => `<div class="flagline"><span class="dot ${f.sev}"></span><span>${esc(f.text)}</span></div>`);
+  if (!all.some(f => f.sev !== 'info')) flags.unshift('<div class="flagline"><span class="dot ok"></span><span>Ordine, conferme e fatture combaciano su tutti i controlli.</span></div>');
+  const rowsHtml = ev.rows.map(r => `
+    <tr class="${r.sev === 'err' ? 'r-err' : r.sev === 'warn' ? 'r-warn' : ''}">
+      <td class="art"><span class="artname">${esc(r.name)}</span><br><span class="artsub ${cellCls(r.cells.gram_carta || r.cells.largh_mm || r.cells.gram_pe)}">${esc(r.sub)}${r.code ? ' · ' + esc(r.code) : ''}</span>
+        <div class="srcs">${r.details.map(x => `<span>${esc(x)}</span>`).join('')}</div></td>
+      <td class="num">${r.qO == null ? '—' : Recon.fmtKg(r.qO)}</td>
+      <td class="num ${cellCls(r.cells.qC)}">${r.qC == null ? '—' : Recon.fmtKg(r.qC)}</td>
+      <td class="num ${cellCls(r.cells.qF)}">${r.qF == null ? '—' : Recon.fmtKg(r.qF)}</td>
+      <td class="num res">${resCell(r.daConf)}</td>
+      <td class="num res">${resCell(r.daFatt, r.stato === 'evaso in tolleranza')}</td>
+      ${priceCell(r.O, r.pO)}${priceCell(r.C, r.pC, r.cells.pC)}${priceCell(r.F, r.pF, r.cells.pF)}
+      ${dateCell(r)}
+      <td><span class="pill ${STATO_CLS[r.stato] || 'info'}">${esc(r.stato)}</span></td>
+    </tr>`).join('');
+  const fmtOk = ok => ok ? '<span class="okm">✓</span>' : '<b class="bad">✗</b>';
+  const invHtml = ev.invoices.map(i => {
+    const f = i.doc, bad = new Set(i.flags.map(x => x.text));
+    const pivaOk = ![...bad].some(x => /P\.IVA/.test(x)), totOk = ![...bad].some(x => /totale merce/.test(x)), massOk = ![...bad].some(x => /massa netta/.test(x));
+    return `<div class="row"><b>Fattura ${esc(f.n_doc || f._file)}</b>${f.data ? ' del ' + Recon.fmtD(f.data) : ''} —
+      P.IVA ${esc(f.piva_buyer || 'n.d.')} ${fmtOk(pivaOk)} ·
+      Totale merce ${f.totale_merce != null ? Recon.fmtN(f.totale_merce) + ' €' : 'n.d.'} ${fmtOk(totOk)} ·
+      Massa netta ${f.massa_netta_kg != null ? Recon.fmtKg(f.massa_netta_kg) + ' kg' : 'n.d.'} ${fmtOk(massOk)} ·
+      Cod. nomenclatura ${esc(f.cod_nomenclatura || [...new Set((f.righe || []).map(r => r.cod_nomenclatura_riga).filter(Boolean))].join(', ') || 'n.d.')}
+      ${i.altriOrdini.length ? `<br><span class="artsub">Questa fattura riguarda anche ${i.altriOrdini.length > 1 ? 'gli ordini' : "l'ordine"} n. ${esc(i.altriOrdini.join(', '))}: le sue righe sono nelle rispettive schede.</span>` : ''}</div>`;
   }).join('');
-  const flags = [];
-  flagsErr.forEach(t => flags.push(`<div class="flagline"><span class="dot err"></span><span>${t}</span></div>`));
-  flagsWarn.forEach(t => flags.push(`<div class="flagline"><span class="dot warn"></span><span>${t}</span></div>`));
-  if (!flags.length && !missingConf) flags.push('<div class="flagline"><span class="dot ok"></span><span>Le righe fatturate combaciano con la conferma su tutti i campi controllati.</span></div>');
-  (flagsInfo || []).forEach(t => flags.push(`<div class="flagline"><span class="dot info"></span><span>${t}</span></div>`));
-  if (missingConf) flags.push("<div class='flagline'><span class='dot warn'></span><span>Conferma d'ordine non trovata. Carica la conferma e rilancia.</span></div>");
-  const notebox = `<div class="notebox">
-    <div class="row"><b>P.IVA Serchio</b> — ${fat.piva_buyer || 'n.d.'} ${pivaOk ? '✓' : '<b style="color:var(--err)">⚠ errata</b>'}</div>
-    <div class="row"><b>Massa netta Intrastat</b> — ${fat.massa_netta_kg != null ? fat.massa_netta_kg.toLocaleString('it-IT', { maximumFractionDigits: 0 }) + ' kg' : 'n.d.'}</div>
-    <div class="row"><b>Cod. nomenclatura</b> — Fattura: ${fat.cod_nomenclatura || '—'}${conf?.cod_nomenclatura ? ' · Conferma: ' + conf.cod_nomenclatura : ''}</div>
-    <div class="row"><b>Pagamento</b> — Fattura: ${fat.pagamento || '—'}${conf?.pagamento ? ' · Conferma: ' + conf.pagamento : ''}</div>
-  </div>`;
-  const dFat = fat.indirizzo_consegna || '', dConf = conf?.indirizzo_consegna || '';
-  const destHtml = (dFat || dConf) ? `<div class="destrow ${destOk === false ? 'bad' : 'ok'}">
-    <span class="dot ${destOk === false ? 'err' : 'ok'}" style="margin-top:5px"></span>
-    <span><b>Consegna</b> — ${destOk === false ? 'INDIRIZZI DIVERSI' : 'coincide'}<br>
-    <span class="artsub">Fattura: ${dFat || '—'}${dConf ? ' · Conferma: ' + dConf : ''}</span></span></div>` : '';
+  const txtHtml = ev.texts.map(x => `<div class="row"><b>${esc(x.label)}</b> ${esc(x.a)} ↔ ${esc(x.b)} ${fmtOk(x.ok)}<br><span class="artsub">${esc(x.a)}: ${esc(x.A)} · ${esc(x.b)}: ${esc(x.B)}</span></div>`).join('');
   d.innerHTML = `
     <div class="suphead"><span class="chev">&#9658;</span>
-      <h3>${fat.fornitore || conf?.fornitore || 'Fornitore'}</h3>${badge}
-      <span class="meta">Ordine n. ${key} · Fattura n. ${fat.n_doc || '—'} · Conferma n. ${conf?.n_doc || '—'} · ${rows.length} righe</span>
+      <h3>${esc(ev.fornitore)}</h3>${badge}${avz}
+      <span class="meta">${meta} · ${ev.rows.length} articol${ev.rows.length === 1 ? 'o' : 'i'}</span>
     </div>
     <div class="supbody">
+      ${strip}
       <div class="flagsec">${flags.join('')}</div>
-      ${destHtml}
-      <div class="tblwrap"><table>
+      <div class="tblwrap"><table class="t3">
         <thead>
-          <tr>
-            <th rowspan="2">Articolo</th>
-            <th class="num" colspan="2">Grammatura (g/m&sup2;)</th>
-            <th class="num" colspan="2">Altezza (mm)</th>
-            <th class="num">Foro (mm)</th>
-            <th class="num" colspan="2">Quantit&agrave; (kg)</th>
-            <th class="num" colspan="2">Prezzo (EUR/ton)</th>
-            <th rowspan="2">Cod. doganale</th>
-          </tr>
-          <tr>
-            <th class="num">Fat.</th><th class="num">Conf.</th>
-            <th class="num">Fat.</th><th class="num">Conf.</th>
-            <th class="num">Fat.</th>
-            <th class="num">Fat.</th><th class="num">Conf.</th>
-            <th class="num">Fat.</th><th class="num">Conf.</th>
-          </tr>
+          <tr><th rowspan="2">Articolo e righe dei documenti</th><th class="num c3" colspan="3">Quantità (kg)</th><th class="num c3" colspan="2">Residuo (kg)</th>
+            <th class="num c3" colspan="3">Prezzo (EUR/ton)</th><th rowspan="2">Consegna</th><th rowspan="2">Stato</th></tr>
+          <tr><th class="num">Ord.</th><th class="num">Conf.</th><th class="num">Fatt.</th><th class="num">Da conf.</th><th class="num">Da fatt.</th>
+            <th class="num">Ord.</th><th class="num">Conf.</th><th class="num">Fatt.</th></tr>
         </thead>
         <tbody>${rowsHtml}</tbody>
       </table></div>
       <div class="legend">
         <span><span class="dot err"></span>Discrepanza (bloccante)</span>
         <span><span class="dot warn"></span>Da verificare</span>
+        <span><span class="dot info"></span>Informazione</span>
         <span><span class="dot ok"></span>Conforme</span>
       </div>
-      ${notebox}
+      ${invHtml || txtHtml ? `<div class="notebox">${invHtml}${txtHtml}</div>` : ''}
     </div>`;
   d.querySelector('.suphead').onclick = () => d.classList.toggle('open');
   return d;
 }
 
-function orphanCard2(key, fat, conf) {
-  const who = conf?.fornitore || fat?.fornitore || 'Documento';
-  const manca = fat ? "la conferma d'ordine" : 'la fattura';
-  const d = document.createElement('div'); d.className = 'supcard s-warn open';
-  d.innerHTML = `<div class="suphead"><span class="chev">&#9658;</span><h3>${who}</h3>
-    <span class="badge warn">non abbinato</span>
-    <span class="meta">Ordine n. ${key || '?'} — manca ${manca}</span></div>
-    <div class="supbody" style="display:block"><div class="flagline"><span class="dot warn"></span>
-    <span>Carica il documento mancante e rilancia il controllo. Verifica che il numero d'ordine Serchio sia leggibile nel PDF.</span></div></div>`;
-  return d;
-}
-
 $('csv2').addEventListener('click', () => {
   const sep = ';';
-  const head = ['Fornitore','N.ordine','N.fattura','N.conferma','Articolo',
-    'Gram carta fat.','Gram carta conf.','Gram PE fat.','Gram PE conf.',
-    'Altezza fat.(mm)','Altezza conf.(mm)','Foro fat.(mm)',
-    'Qty fat.(kg)','Qty conf.(kg)','Prezzo fat.(EUR/ton)','Prezzo conf.(EUR/ton)',
-    'Cod.nomenclatura fat.','Massa netta (kg)','P.IVA Serchio','Pagamento fat.','Esito'];
+  const head = ['Fornitore', 'N. ordine', 'Conferme', 'Fatture', 'Articolo', 'Cod. articolo', 'Grammatura', 'Altezza mm',
+    'Kg ordinati', 'Kg confermati', 'Kg fatturati', 'Kg da confermare', 'Kg da fatturare',
+    'EUR/ton ordine', 'EUR/ton conferma', 'EUR/ton fattura', 'Consegna ordine', 'Consegna confermata', 'Spedizione', 'Stato', 'Esito', 'Segnalazioni'];
+  const q = v => `"${String(v == null ? '' : v).replace(/"/g, "'")}"`;
+  const it = v => v == null ? '' : String(Math.round(v * 100) / 100).replace('.', ',');
   const lines = [head.join(sep)];
-  const it = v => v == null ? '' : String(v).replace('.', ',');
-  for (const { key, ev } of lastEvals2) {
-    const { fat, conf, rows } = ev;
-    for (const { f, c, rErr, rWarn } of rows) {
+  for (const ev of lastEvals2) {
+    const o = ev.order;
+    for (const r of ev.rows) {
+      const g = r.O[0] || r.C[0] || r.F[0] || {};
       lines.push([
-        `"${(fat.fornitore || '').replace(/"/g, "'")}"`, key, fat.n_doc || '', conf?.n_doc || '',
-        `"${(f?.desc || c?.desc || '').replace(/"/g, "'")}"`,
-        it(f?.gram_carta), it(c?.gram_carta), it(f?.gram_pe), it(c?.gram_pe),
-        it(f?.largh_mm), it(c?.largh_mm), it(f?.foro_mm),
-        it(f?.q_kg), it(c?.q_kg), it(f?.prezzo_eur_ton), it(c?.prezzo_eur_ton),
-        it(f?.cod_nomenclatura_riga || fat.cod_nomenclatura), it(fat.massa_netta_kg),
-        fat.piva_buyer || '', fat.pagamento || '',
-        rErr ? 'DISCREPANZA' : rWarn ? 'DA VERIFICARE' : 'OK'
+        q(ev.fornitore), ev.key, q(o.conferme.map(c => c.n_doc).join(' + ')), q(o.fatture.map(f => f.n_doc).join(' + ')),
+        q(r.name), q(r.code), it(g.gram_carta), it(g.largh_mm),
+        it(r.qO), it(r.qC), it(r.qF), it(r.daConf), it(r.daFatt),
+        it(r.pO), it(r.pC), it(r.pF), Recon.fmtD(r.dO).replace('—', ''),
+        r.dCfrom ? Recon.fmtD(r.dCfrom) + (r.dCto && r.dCto !== r.dCfrom ? ' - ' + Recon.fmtD(r.dCto) : '') : '',
+        r.dF.map(Recon.fmtD).join(', '), r.stato,
+        r.sev === 'err' ? 'DISCREPANZA' : r.sev === 'warn' ? 'DA VERIFICARE' : 'OK',
+        q(r.flags.map(f => f.text).join(' | ')),
       ].join(sep));
     }
   }
-  const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = 'report_fatture_intracomunitarie.csv'; a.click();
+  a.download = 'report_ordini_conferme_fatture.csv'; a.click();
 });
 </script>
 </body>

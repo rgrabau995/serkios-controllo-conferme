@@ -1,2 +1,5 @@
 node_modules/
 .env
+test/e2e-estratti.json
+test/fixture-*.json
+test/recon.test.js

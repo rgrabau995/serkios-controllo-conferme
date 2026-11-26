@@ -4,7 +4,8 @@
   "description": "Backend Railway per Suite Controlli Serchio Distribuzione",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test test/"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.13.0",

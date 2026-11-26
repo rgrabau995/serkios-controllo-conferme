@@ -5,9 +5,11 @@ App web per il controllo automatico di documenti commerciali nel settore carta. 
 ## Struttura del repo
 
 ```
-server.js          → Backend Node/Express (Railway) — gestisce Tool 1 e Tool 2
+server.js          → Backend Node/Express (Railway): lettura PDF con Claude, abbinamento righe, serve la pagina
+index.html         → Pagina del tool (servita da Railway su /)
+recon.js           → Logica di riconciliazione ordine ↔ conferme ↔ fatture (usata dalla pagina e dai test)
+test/              → Prova completa con l'AI (`test/e2e.js`); i test con i dati reali dei PDF restano solo in locale
 package.json
-index.html         → Frontend di riferimento (non usato in produzione)
 tool2-fatture-intra/
   server.js        → (legacy, non più usato)
   package.json     → (legacy, non più usato)
@@ -18,7 +20,7 @@ tool2-fatture-intra/
 | Tool | Funzione | Stato |
 |---|---|---|
 | **Conferme d'Ordine** | Confronta ordini Serchio con conferme fornitore | ✅ Live |
-| **Fatture Fornitore** | Confronta fatture UE + Mondi con conferme d'ordine | ✅ Live |
+| **Ordini · Conferme · Fatture** | Riconcilia ordine Serchio, conferme e fatture fornitore per numero d'ordine: righe, quantità, prezzi, date, residui da confermare/fatturare, anche con più conferme e più fatture | ✅ Live |
 | **Fatture Estere** | Fornitori extra-UE (Turchia, UK, Asia) | ⏳ In arrivo |
 
 ## Architettura
@@ -26,8 +28,10 @@ tool2-fatture-intra/
 ```
 GitHub (questo repo)
   └── Railway (backend Node/Express)
-        ├── POST /api/analizza   → Tool 1 Conferme d'Ordine
-        └── POST /api/analizza2  → Tool 2 Fatture Fornitore
+        ├── POST /api/analizza    → Tool 1: lettura ordini e conferme
+        ├── POST /api/abbina      → Tool 1: abbinamento righe ordine ↔ conferma
+        ├── POST /api/analizza3   → Tool 2: lettura ordini, conferme, fatture (schema unico)
+        └── POST /api/riconcilia  → Tool 2: abbinamento articoli ordine ↔ conferme ↔ fatture
               ↑
         Netlify (frontend HTML singolo)
 ```
